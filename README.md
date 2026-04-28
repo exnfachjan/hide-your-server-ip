@@ -40,51 +40,6 @@ Grab the latest release from the [Releases](https://github.com/exnfachjan/hide-y
 
 ---
 
-## Building from source
-
-```bash
-./gradlew build          # Linux / macOS
-.\gradlew.bat build      # Windows
-```
-
-Output JARs — the filename shows the exact compatible MC version range:
-
-```
-fabric-1.21.1/build/libs/   hide-your-server-ip-fabric-mc1.21.1-1.21.3-1.0.0.jar
-fabric-1.21.4/build/libs/   hide-your-server-ip-fabric-mc1.21.4-1.0.0.jar
-neoforge-1.21.1/build/libs/ hide-your-server-ip-neoforge-mc1.21.1-1.21.3-1.0.0.jar
-neoforge-1.21.4/build/libs/ hide-your-server-ip-neoforge-mc1.21.4-1.0.0.jar
-```
-
-Build only a specific version:
-```bash
-.\gradlew.bat :fabric-1.21.4:build
-.\gradlew.bat :neoforge-1.21.1:build
-```
-
----
-
-## Project structure
-
-```
-hide-your-server-ip/
-├── common/                        # Shared code & resources
-│   ├── HYSIMod.java
-│   ├── hysi.mixins.json
-│   └── assets/hysi/icon.png
-│
-├── versions/
-│   ├── 1.21.1/                    # Mixins for MC 1.21.1–1.21.3
-│   └── 1.21.4/                    # Mixins for MC 1.21.4
-│
-├── fabric-1.21.1/                 # Fabric — MC 1.21.1–1.21.3
-├── fabric-1.21.4/                 # Fabric — MC 1.21.4
-├── neoforge-1.21.1/               # NeoForge — MC 1.21.1–1.21.3
-└── neoforge-1.21.4/               # NeoForge — MC 1.21.4
-```
-
----
-
 ## License
 
 [MIT](LICENSE) — free to use, modify and distribute.
