@@ -6,7 +6,7 @@
   "description": "Hides server IP addresses behind a password-style mask. Click [*] to reveal.",
   "authors": ["exnfachjan"],
   "contact": { "sources": "https://github.com/exnfachjan/hide-your-server-ip" },
-  "license": "MIT",
+  "license": "ARR",
   "icon": "assets/hysi/icon.png",
   "environment": "client",
   "entrypoints": { "client": ["dev.exnfachjan.hysi.fabric.HYSIFabricMod"] },

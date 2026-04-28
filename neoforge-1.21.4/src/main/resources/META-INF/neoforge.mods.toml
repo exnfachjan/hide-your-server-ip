@@ -1,6 +1,6 @@
 modLoader = "javafml"
 loaderVersion = "[2,)"
-license = "MIT"
+license = "ARR"
 
 [[mods]]
 modId = "hysi"

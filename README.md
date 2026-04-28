@@ -40,9 +40,10 @@ Grab the latest release from the [Releases](https://github.com/exnfachjan/hide-y
 
 ---
 
+
 ## License
 
-[MIT](LICENSE) — free to use, modify and distribute.
+Copyright (c) 2025 exnfachjan. All rights reserved. 
 
 ---
 
