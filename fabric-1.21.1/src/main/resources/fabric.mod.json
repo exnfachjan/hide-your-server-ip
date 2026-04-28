@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "hysi",
+  "version": "${version}",
+  "name": "Hide Your Server IP",
+  "description": "Hides server IP addresses behind a password-style mask. Click [*] to reveal.",
+  "authors": ["exnfachjan"],
+  "contact": { "sources": "https://github.com/exnfachjan/hide-your-server-ip" },
+  "license": "MIT",
+  "icon": "assets/hysi/icon.png",
+  "environment": "client",
+  "entrypoints": { "client": ["dev.exnfachjan.hysi.fabric.HYSIFabricMod"] },
+  "mixins": ["hysi.mixins.json"],
+  "depends": {
+    "fabricloader": ">=0.16.0",
+    "minecraft": ">=1.21.1 <1.21.4",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
+}

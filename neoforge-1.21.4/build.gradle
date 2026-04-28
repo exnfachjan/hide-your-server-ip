@@ -1,0 +1,61 @@
+plugins {
+    id "net.neoforged.moddev" version "2.0.141"
+    id "java"
+}
+
+version = "${rootProject.mod_version}+mc1.21.4"
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+    withSourcesJar()
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = "UTF-8"
+    options.release = 21
+}
+
+// Prevent duplicate file errors when common/ and neoforge/ resources overlap
+tasks.withType(AbstractCopyTask).configureEach {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+sourceSets.main {
+    java.srcDirs += [rootProject.file("common/src/main/java")]
+    resources.srcDirs += [rootProject.file("common/src/main/resources")]
+    java.srcDirs += [rootProject.file("versions/1.21.4/src/main/java")]
+}
+
+neoForge {
+    version = "21.4.157"
+
+    runs {
+        client {
+            client()
+            ideName = "NeoForge 1.21.4 Client"
+        }
+    }
+
+    mods {
+        "${rootProject.mod_id}" {
+            sourceSet sourceSets.main
+        }
+    }
+}
+
+processResources {
+    inputs.property "version", project.version
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+    filesMatching("META-INF/neoforge.mods.toml") {
+        expand(
+            "version": project.version,
+            "file": ["jarVersion": project.version]
+        )
+    }
+}
+
+base {
+    archivesName = "${rootProject.archives_base_name}-neoforge-mc1.21.4"
+}

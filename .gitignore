@@ -1,0 +1,22 @@
+# Gradle
+.gradle/
+build/
+*/build/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.classpath
+*.project
+.settings/
+
+# Loom cache
+.loom-cache/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Keep wrapper jar
+!gradle/wrapper/gradle-wrapper.jar
