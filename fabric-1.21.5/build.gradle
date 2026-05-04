@@ -1,0 +1,45 @@
+plugins {
+    id "fabric-loom" version "${rootProject.fabric_loom_1.21.5}"
+    id "java"
+}
+
+// Covers Minecraft 1.21.5 through 1.21.11 (same toolchain, Java 21)
+version = "${rootProject.mod_version}+mc1.21.5-1.21.11"
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+    withSourcesJar()
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = "UTF-8"
+    options.release = 21
+}
+
+sourceSets.main {
+    java.srcDirs += [rootProject.file("common/src/main/java")]
+    resources.srcDirs += [rootProject.file("common/src/main/resources")]
+    java.srcDirs += [rootProject.file("versions/1.21.5/src/main/java")]
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${rootProject.mc_1.21.5}"
+    mappings loom.officialMojangMappings()
+
+    modImplementation "net.fabricmc:fabric-loader:${rootProject.fabric_loader_version}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${rootProject.fabric_api_1.21.5}"
+}
+
+processResources {
+    inputs.property "version", project.version
+    filteringCharset "UTF-8"
+
+    filesMatching("fabric.mod.json") {
+        expand "version": project.version
+    }
+}
+
+base {
+    archivesName = "${rootProject.archives_base_name}-fabric-mc1.21.5-1.21.11"
+}

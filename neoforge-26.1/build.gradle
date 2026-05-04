@@ -1,0 +1,65 @@
+plugins {
+    id "net.neoforged.moddev" version "${rootProject.neoforge_moddev_26.1}"
+    id "java"
+}
+
+// Covers Minecraft 26.1 and future 26.1.x hotfixes
+version = "${rootProject.mod_version}+mc26.1"
+
+// Java 25 is required by Minecraft 26.1+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(25)
+    }
+    withSourcesJar()
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = "UTF-8"
+    options.release = 25
+}
+
+// Prevent duplicate file errors when common/ and neoforge/ resources overlap
+tasks.withType(AbstractCopyTask).configureEach {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+sourceSets.main {
+    java.srcDirs += [rootProject.file("common/src/main/java")]
+    resources.srcDirs += [rootProject.file("common/src/main/resources")]
+    java.srcDirs += [rootProject.file("versions/26.1/src/main/java")]
+}
+
+neoForge {
+    // NeoForge 26.1 uses four-component versioning: <mc-major>.<mc-minor>.<mc-patch>.<nf-build>
+    version = "${rootProject.neo_26.1}"
+
+    runs {
+        client {
+            client()
+            ideName = "NeoForge 26.1 Client"
+        }
+    }
+
+    mods {
+        "${rootProject.mod_id}" {
+            sourceSet sourceSets.main
+        }
+    }
+}
+
+processResources {
+    inputs.property "version", project.version
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+    filesMatching("META-INF/neoforge.mods.toml") {
+        expand(
+            "version": project.version,
+            "file": ["jarVersion": project.version]
+        )
+    }
+}
+
+base {
+    archivesName = "${rootProject.archives_base_name}-neoforge-mc26.1"
+}
