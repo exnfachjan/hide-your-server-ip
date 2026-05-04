@@ -24,46 +24,37 @@ public abstract class DirectJoinServerScreenMixin extends Screen {
     protected DirectJoinServerScreenMixin(Component title) { super(title); }
 
     @Inject(method = "init", at = @At("TAIL"))
-    private void hysi$init(CallbackInfo ci) {
-        hysi$setupIfNeeded();
-    }
+    private void hysi$init(CallbackInfo ci) { hysi$setupIfNeeded(); }
 
     @Inject(method = "tick", at = @At("TAIL"))
-    private void hysi$tick(CallbackInfo ci) {
-        hysi$setupIfNeeded();
-    }
+    private void hysi$tick(CallbackInfo ci) { hysi$setupIfNeeded(); }
 
     @Unique
     private void hysi$setupIfNeeded() {
-        if (hysi$btn != null || hysi$box != null) return;
-        for (GuiEventListener c : this.children())
-            if (c instanceof EditBox b) { hysi$box = b; break; }
-        if (hysi$box == null) return;
-        hysi$real = hysi$box.getValue();
+        if (hysi$btn != null) return;
+        if (hysi$box == null) {
+            for (GuiEventListener c : this.children())
+                if (c instanceof EditBox b) { hysi$box = b; break; }
+            if (hysi$box == null) return;
+            hysi$real = hysi$box.getValue();
 
-        hysi$box.setResponder(val -> {
-            if (hysi$lock) return;
-            if (!hysi$masked) {
-                hysi$real = val;
-                return;
-            }
-            int prevLen = hysi$real.length();
-            int newLen  = val.length();
-            if (newLen > prevLen) {
-                String added = val.substring(prevLen);
-                hysi$real = hysi$real + added;
-            } else if (newLen < prevLen) {
-                hysi$real = hysi$real.substring(0, newLen);
-            }
+            hysi$box.setResponder(val -> {
+                if (hysi$lock) return;
+                if (!hysi$masked) { hysi$real = val; return; }
+                int prevLen = hysi$real.length();
+                int newLen  = val.length();
+                if (newLen > prevLen) hysi$real = hysi$real + val.substring(prevLen);
+                else if (newLen < prevLen) hysi$real = hysi$real.substring(0, newLen);
+                hysi$lock = true;
+                hysi$box.setValue("•".repeat(hysi$real.length()));
+                hysi$lock = false;
+            });
+
+            hysi$box.setWidth(hysi$box.getWidth() - 26);
             hysi$lock = true;
             hysi$box.setValue("•".repeat(hysi$real.length()));
             hysi$lock = false;
-        });
-
-        hysi$box.setWidth(hysi$box.getWidth() - 26);
-        hysi$lock = true;
-        hysi$box.setValue("•".repeat(hysi$real.length()));
-        hysi$lock = false;
+        }
 
         hysi$btn = this.addRenderableWidget(
                 Button.builder(hysi$label(), b -> {
@@ -73,8 +64,7 @@ public abstract class DirectJoinServerScreenMixin extends Screen {
                             hysi$lock = false;
                             hysi$btn.setMessage(hysi$label());
                         })
-                        .bounds(hysi$box.getX() + hysi$box.getWidth() + 2,
-                                hysi$box.getY(), 24, 20)
+                        .bounds(hysi$box.getX() + hysi$box.getWidth() + 2, hysi$box.getY(), 24, 20)
                         .build()
         );
     }
@@ -88,8 +78,7 @@ public abstract class DirectJoinServerScreenMixin extends Screen {
     }
 
     @Unique private Component hysi$label() {
-        return hysi$masked
-                ? Component.literal("[*]").withStyle(ChatFormatting.RED)
+        return hysi$masked ? Component.literal("[*]").withStyle(ChatFormatting.RED)
                 : Component.literal("[O]").withStyle(ChatFormatting.GREEN);
     }
 }

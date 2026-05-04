@@ -48,44 +48,46 @@ public abstract class EditServerScreenMixin extends Screen {
 
     @Unique
     private void hysi$setupIfNeeded() {
-        if (hysi$btn != null || hysi$box != null) return;
-        List<EditBox> boxes = new ArrayList<>();
-        for (GuiEventListener c : this.children())
-            if (c instanceof EditBox b) boxes.add(b);
-        if (boxes.isEmpty()) return;
-        boxes.sort((a, b) -> Integer.compare(b.getY(), a.getY()));
-        hysi$box  = boxes.get(0);
-        hysi$real = hysi$box.getValue();
+        if (hysi$btn != null) return;
+        if (hysi$box == null) {
+            List<EditBox> boxes = new ArrayList<>();
+            for (GuiEventListener c : this.children())
+                if (c instanceof EditBox b) boxes.add(b);
+            if (boxes.isEmpty()) return;
+            boxes.sort((a, b) -> Integer.compare(b.getY(), a.getY()));
+            hysi$box  = boxes.get(0);
+            hysi$real = hysi$box.getValue();
 
-        hysi$box.setResponder(val -> {
-            if (hysi$lock) return;          // our own setValue — ignore
-            if (!hysi$masked) {
-                hysi$real = val;            // unmasked: take value as-is
-                return;
-            }
-            // Masked: user typed or deleted.
-            // val contains whatever EditBox now holds (mix of bullets + new chars).
-            // We compute the change relative to our known bullet string.
-            int prevLen = hysi$real.length();
-            int newLen  = val.length();
-            if (newLen > prevLen) {
-                // Characters were added.  We can read the newly added chars from
-                // the end of val because EditBox stores them before our override.
-                String added = val.substring(prevLen);
-                hysi$real = hysi$real + added;
-            } else if (newLen < prevLen) {
-                hysi$real = hysi$real.substring(0, newLen);
-            }
-            // Re-apply bullets
+            hysi$box.setResponder(val -> {
+                if (hysi$lock) return;          // our own setValue — ignore
+                if (!hysi$masked) {
+                    hysi$real = val;            // unmasked: take value as-is
+                    return;
+                }
+                // Masked: user typed or deleted.
+                // val contains whatever EditBox now holds (mix of bullets + new chars).
+                // We compute the change relative to our known bullet string.
+                int prevLen = hysi$real.length();
+                int newLen  = val.length();
+                if (newLen > prevLen) {
+                    // Characters were added.  We can read the newly added chars from
+                    // the end of val because EditBox stores them before our override.
+                    String added = val.substring(prevLen);
+                    hysi$real = hysi$real + added;
+                } else if (newLen < prevLen) {
+                    hysi$real = hysi$real.substring(0, newLen);
+                }
+                // Re-apply bullets
+                hysi$lock = true;
+                hysi$box.setValue("•".repeat(hysi$real.length()));
+                hysi$lock = false;
+            });
+
+            hysi$box.setWidth(hysi$box.getWidth() - 26);
             hysi$lock = true;
             hysi$box.setValue("•".repeat(hysi$real.length()));
             hysi$lock = false;
-        });
-
-        hysi$box.setWidth(hysi$box.getWidth() - 26);
-        hysi$lock = true;
-        hysi$box.setValue("•".repeat(hysi$real.length()));
-        hysi$lock = false;
+        }
 
         hysi$btn = this.addRenderableWidget(
                 Button.builder(hysi$label(), b -> {
