@@ -86,6 +86,7 @@ public abstract class DirectJoinServerScreenMixin extends Screen {
         hysi$syncing = false;
     }
 
+
     @Unique private Component hysi$buttonLabel() {
         return hysi$masked
                 ? Component.literal("[*]").withStyle(ChatFormatting.RED)
