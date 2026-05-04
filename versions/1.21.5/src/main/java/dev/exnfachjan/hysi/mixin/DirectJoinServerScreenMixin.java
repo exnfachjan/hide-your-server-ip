@@ -5,27 +5,22 @@ import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.DirectJoinServerScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
-import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.ChatFormatting;
-import net.minecraft.network.chat.Style;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import net.minecraft.client.gui.components.events.GuiEventListener;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.function.BiFunction;
 
 @Mixin(DirectJoinServerScreen.class)
 public abstract class DirectJoinServerScreenMixin extends Screen {
 
     @Unique private EditBox hysi$ipBox;
-    @Unique private boolean hysi$ipVisible = false;
-    @Unique private Button hysi$toggleButton;
+    @Unique private String  hysi$realValue = "";
+    @Unique private boolean hysi$masked = true;
+    @Unique private boolean hysi$syncing = false;
+    @Unique private Button  hysi$toggleButton;
 
     protected DirectJoinServerScreenMixin(Component title) { super(title); }
 
@@ -36,72 +31,56 @@ public abstract class DirectJoinServerScreenMixin extends Screen {
             if (child instanceof EditBox box) { hysi$ipBox = box; break; }
         }
         if (hysi$ipBox == null) return;
+
+        hysi$realValue = hysi$ipBox.getValue();
+
+        hysi$ipBox.setResponder(newDisplayValue -> {
+            if (hysi$syncing) return;
+            if (hysi$masked) {
+                int oldLen = hysi$realValue.length();
+                int newLen = newDisplayValue.length();
+                if (newLen < oldLen) {
+                    hysi$realValue = hysi$realValue.substring(0, newLen);
+                }
+                hysi$applyDisplay();
+            } else {
+                hysi$realValue = newDisplayValue;
+            }
+        });
+
         hysi$ipBox.setWidth(hysi$ipBox.getWidth() - 26);
-        hysi$applyFormatter();
+        hysi$applyDisplay();
+
         hysi$toggleButton = this.addRenderableWidget(
-                Button.builder(hysi$buttonLabel(), btn -> hysi$toggleVisibility())
+                Button.builder(hysi$buttonLabel(), btn -> {
+                            hysi$masked = !hysi$masked;
+                            hysi$applyDisplay();
+                            hysi$toggleButton.setMessage(hysi$buttonLabel());
+                        })
                         .bounds(hysi$ipBox.getX() + hysi$ipBox.getWidth() + 2,
                                 hysi$ipBox.getY(), 24, 20)
                         .build()
         );
     }
 
-    @Unique private void hysi$toggleVisibility() {
-        hysi$ipVisible = !hysi$ipVisible;
-        hysi$applyFormatter();
-        if (hysi$toggleButton != null)
-            hysi$toggleButton.setMessage(hysi$buttonLabel());
-    }
-
-    @Unique private void hysi$applyFormatter() {
+    @Unique private void hysi$applyDisplay() {
         if (hysi$ipBox == null) return;
-        BiFunction<String, Integer, FormattedCharSequence> fmt;
-        if (hysi$ipVisible) {
-            fmt = (text, pos) -> FormattedCharSequence.forward(text, Style.EMPTY);
-        } else {
-            fmt = (text, pos) -> {
-                if (text.isEmpty()) return FormattedCharSequence.EMPTY;
-                return FormattedCharSequence.forward("•".repeat(text.length()), Style.EMPTY);
-            };
-        }
-        hysi$setFormatter(hysi$ipBox, fmt);
+        hysi$syncing = true;
+        hysi$ipBox.setValue(hysi$masked ? "•".repeat(hysi$realValue.length()) : hysi$realValue);
+        hysi$syncing = false;
     }
 
-    /**
-     * Version-agnostic formatter injection.
-     * 1. Try setFormatter() method (exists in 1.21.1–1.21.5).
-     * 2. Fall back to setting all BiFunction fields directly via reflection
-     *    (needed for 1.21.6–1.21.11 where setFormatter() was removed).
-     */
-    @Unique
-    private static void hysi$setFormatter(
-            EditBox box, BiFunction<String, Integer, FormattedCharSequence> fmt) {
-        // Try public method first (1.21.5 and older)
-        try {
-            Method m = EditBox.class.getMethod("setFormatter", BiFunction.class);
-            m.invoke(box, fmt);
-            return;
-        } catch (NoSuchMethodException ignored) {
-            // method removed — fall through to field reflection
-        } catch (Exception e) {
-            return;
-        }
-        // Reflection fallback: set every BiFunction field in the hierarchy
-        Class<?> clazz = box.getClass();
-        while (clazz != null) {
-            for (Field f : clazz.getDeclaredFields()) {
-                if (f.getType() == BiFunction.class) {
-                    f.setAccessible(true);
-                    try { f.set(box, fmt); } catch (IllegalAccessException ignored) {}
-                }
-            }
-            clazz = clazz.getSuperclass();
-        }
+    @Inject(method = "onClose", at = @At("HEAD"))
+    private void hysi$restoreBeforeSave(CallbackInfo ci) {
+        if (hysi$ipBox == null) return;
+        hysi$syncing = true;
+        hysi$ipBox.setValue(hysi$realValue);
+        hysi$syncing = false;
     }
 
     @Unique private Component hysi$buttonLabel() {
-        return hysi$ipVisible
-                ? Component.literal("[O]").withStyle(ChatFormatting.GREEN)
-                : Component.literal("[*]").withStyle(ChatFormatting.RED);
+        return hysi$masked
+                ? Component.literal("[*]").withStyle(ChatFormatting.RED)
+                : Component.literal("[O]").withStyle(ChatFormatting.GREEN);
     }
 }
