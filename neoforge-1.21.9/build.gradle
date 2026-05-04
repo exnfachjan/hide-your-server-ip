@@ -1,0 +1,56 @@
+plugins {
+    id "net.neoforged.moddev" version "2.0.141"
+    id "java"
+}
+
+version = "${rootProject.mod_version}+mc1.21.9"
+
+java {
+    toolchain { languageVersion = JavaLanguageVersion.of(21) }
+    withSourcesJar()
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = "UTF-8"
+    options.release = 21
+}
+
+tasks.withType(AbstractCopyTask).configureEach {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+sourceSets.main {
+    java.srcDirs  += [rootProject.file("common/src/main/java")]
+    java.srcDirs  += [rootProject.file("versions/1.21.9/src/main/java")]
+    resources.srcDirs += [rootProject.file("versions/1.21.9/resources")]
+    resources.srcDirs += [rootProject.file("common/src/main/resources")]
+}
+
+neoForge {
+    version = "${rootProject.neo_1_21_9}"
+
+    runs {
+        client {
+            client()
+            ideName = "NeoForge 1.21.9 Client"
+        }
+    }
+
+    mods {
+        "${rootProject.mod_id}" {
+            sourceSet sourceSets.main
+        }
+    }
+}
+
+processResources {
+    inputs.property "version", project.version
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    filesMatching("META-INF/neoforge.mods.toml") {
+        expand("version": project.version, "file": ["jarVersion": project.version])
+    }
+}
+
+base {
+    archivesName = "hysi-mc1.21.9-neoforge"
+}

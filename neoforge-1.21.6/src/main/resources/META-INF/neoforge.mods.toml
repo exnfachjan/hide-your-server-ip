@@ -1,0 +1,31 @@
+modLoader = "javafml"
+loaderVersion = "[2,)"
+license = "ARR"
+
+[[mods]]
+modId = "hysi"
+version = "${version}"
+displayName = "Hide Your Server IP"
+description = '''
+Hides server IP addresses behind a password-style mask in the multiplayer menus.
+Click [*] next to the address field to reveal the IP.
+Designed to prevent accidental IP leaks during streams.
+'''
+authors = "exnfachjan"
+
+[[dependencies.hysi]]
+modId = "neoforge"
+type = "required"
+versionRange = "[21.6,21.7)"
+ordering = "NONE"
+side = "CLIENT"
+
+[[dependencies.hysi]]
+modId = "minecraft"
+type = "required"
+versionRange = "[1.21.6,1.21.7)"
+ordering = "NONE"
+side = "CLIENT"
+
+[[mixins]]
+config = "hysi.mixins.json"
