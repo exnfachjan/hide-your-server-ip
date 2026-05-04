@@ -13,8 +13,10 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import net.minecraft.client.gui.components.events.GuiEventListener;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.BiFunction;
 
 @Mixin(targets = "net.minecraft.client.gui.screens.EditServerScreen")
 public abstract class EditServerScreenMixin extends Screen {
@@ -54,14 +56,41 @@ public abstract class EditServerScreenMixin extends Screen {
 
     @Unique private void hysi$applyFormatter() {
         if (hysi$ipBox == null) return;
-        EditBoxFormatterAccessor accessor = (EditBoxFormatterAccessor) hysi$ipBox;
+        BiFunction<String, Integer, FormattedCharSequence> fmt;
         if (hysi$ipVisible) {
-            accessor.hysi$setFormatter((text, pos) -> FormattedCharSequence.forward(text, Style.EMPTY));
+            fmt = (text, pos) -> FormattedCharSequence.forward(text, Style.EMPTY);
         } else {
-            accessor.hysi$setFormatter((text, pos) -> {
+            fmt = (text, pos) -> {
                 if (text.isEmpty()) return FormattedCharSequence.EMPTY;
                 return FormattedCharSequence.forward("•".repeat(text.length()), Style.EMPTY);
-            });
+            };
+        }
+        hysi$setFormatterViaReflection(hysi$ipBox, fmt);
+    }
+
+    /**
+     * Sets the formatter field on EditBox via reflection.
+     * This is version-agnostic: we search all declared fields for one
+     * whose type is BiFunction and set it directly, bypassing the
+     * removed setFormatter() method and avoiding @Accessor remapping issues.
+     */
+    @Unique
+    private static void hysi$setFormatterViaReflection(
+            EditBox box, BiFunction<String, Integer, FormattedCharSequence> formatter) {
+        Class<?> clazz = box.getClass();
+        while (clazz != null) {
+            for (Field field : clazz.getDeclaredFields()) {
+                if (field.getType() == BiFunction.class) {
+                    field.setAccessible(true);
+                    try {
+                        field.set(box, formatter);
+                        return;
+                    } catch (IllegalAccessException e) {
+                        // continue searching
+                    }
+                }
+            }
+            clazz = clazz.getSuperclass();
         }
     }
 
