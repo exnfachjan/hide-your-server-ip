@@ -25,7 +25,7 @@ import java.util.List;
  *   - lock=true  →  we set the value ourselves, ignore responder
  *   - lock=false →  user changed the value; sync hysi$real from the delta
  */
-@Mixin(targets = "net.minecraft.client.gui.screens.EditServerScreen")
+@Mixin(targets = "net.minecraft.client.gui.screens.multiplayer.EditServerScreen")
 public abstract class EditServerScreenMixin extends Screen {
 
     @Unique private EditBox hysi$box;
@@ -38,6 +38,17 @@ public abstract class EditServerScreenMixin extends Screen {
 
     @Inject(method = "init", at = @At("TAIL"))
     private void hysi$init(CallbackInfo ci) {
+        hysi$setupIfNeeded();
+    }
+
+    @Inject(method = "tick", at = @At("TAIL"))
+    private void hysi$tick(CallbackInfo ci) {
+        hysi$setupIfNeeded();
+    }
+
+    @Unique
+    private void hysi$setupIfNeeded() {
+        if (hysi$btn != null || hysi$box != null) return;
         List<EditBox> boxes = new ArrayList<>();
         for (GuiEventListener c : this.children())
             if (c instanceof EditBox b) boxes.add(b);

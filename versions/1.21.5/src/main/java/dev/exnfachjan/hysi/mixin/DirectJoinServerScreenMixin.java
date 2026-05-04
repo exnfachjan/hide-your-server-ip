@@ -2,7 +2,6 @@ package dev.exnfachjan.hysi.mixin;
 
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
-import net.minecraft.client.gui.screens.DirectJoinServerScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.ChatFormatting;
@@ -13,7 +12,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 
-@Mixin(DirectJoinServerScreen.class)
+@Mixin(targets = "net.minecraft.client.gui.screens.multiplayer.DirectJoinServerScreen")
 public abstract class DirectJoinServerScreenMixin extends Screen {
 
     @Unique private EditBox hysi$box;
@@ -26,6 +25,17 @@ public abstract class DirectJoinServerScreenMixin extends Screen {
 
     @Inject(method = "init", at = @At("TAIL"))
     private void hysi$init(CallbackInfo ci) {
+        hysi$setupIfNeeded();
+    }
+
+    @Inject(method = "tick", at = @At("TAIL"))
+    private void hysi$tick(CallbackInfo ci) {
+        hysi$setupIfNeeded();
+    }
+
+    @Unique
+    private void hysi$setupIfNeeded() {
+        if (hysi$btn != null || hysi$box != null) return;
         for (GuiEventListener c : this.children())
             if (c instanceof EditBox b) { hysi$box = b; break; }
         if (hysi$box == null) return;
