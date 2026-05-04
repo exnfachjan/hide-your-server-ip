@@ -19,10 +19,8 @@ import java.util.List;
 /**
  * Mixin for Minecraft 26.1+.
  *
- * In 26.1 the game is unobfuscated and Mojang's official names are used
- * directly — no mapping remapping is needed.  The string-based @Mixin target
- * keeps this class free of compile-time class imports that could break if
- * Mojang renames the screen again in a future drop.
+ * setFormatter() was removed in 26.1. We use EditBoxFormatterAccessor
+ * to write directly to the internal "formatter" field instead.
  */
 @Mixin(targets = "net.minecraft.client.gui.screens.EditServerScreen")
 public abstract class EditServerScreenMixin extends Screen {
@@ -41,16 +39,15 @@ public abstract class EditServerScreenMixin extends Screen {
             if (child instanceof EditBox box) boxes.add(box);
         }
         if (boxes.isEmpty()) return;
-        // The IP box is the one positioned lowest on screen
         boxes.sort((a, b) -> Integer.compare(b.getY(), a.getY()));
         hysi$ipBox = boxes.get(0);
         hysi$ipBox.setWidth(hysi$ipBox.getWidth() - 26);
         hysi$applyFormatter();
         hysi$toggleButton = this.addRenderableWidget(
-            Button.builder(hysi$buttonLabel(), btn -> hysi$toggleVisibility())
-                  .bounds(hysi$ipBox.getX() + hysi$ipBox.getWidth() + 2,
-                          hysi$ipBox.getY(), 24, 20)
-                  .build()
+                Button.builder(hysi$buttonLabel(), btn -> hysi$toggleVisibility())
+                        .bounds(hysi$ipBox.getX() + hysi$ipBox.getWidth() + 2,
+                                hysi$ipBox.getY(), 24, 20)
+                        .build()
         );
     }
 
@@ -63,10 +60,11 @@ public abstract class EditServerScreenMixin extends Screen {
 
     @Unique private void hysi$applyFormatter() {
         if (hysi$ipBox == null) return;
+        EditBoxFormatterAccessor accessor = (EditBoxFormatterAccessor) hysi$ipBox;
         if (hysi$ipVisible) {
-            hysi$ipBox.setFormatter((text, pos) -> FormattedCharSequence.forward(text, Style.EMPTY));
+            accessor.hysi$setFormatter((text, pos) -> FormattedCharSequence.forward(text, Style.EMPTY));
         } else {
-            hysi$ipBox.setFormatter((text, pos) -> {
+            accessor.hysi$setFormatter((text, pos) -> {
                 if (text.isEmpty()) return FormattedCharSequence.EMPTY;
                 return FormattedCharSequence.forward("•".repeat(text.length()), Style.EMPTY);
             });
@@ -75,7 +73,7 @@ public abstract class EditServerScreenMixin extends Screen {
 
     @Unique private Component hysi$buttonLabel() {
         return hysi$ipVisible
-            ? Component.literal("[O]").withStyle(ChatFormatting.GREEN)
-            : Component.literal("[*]").withStyle(ChatFormatting.RED);
+                ? Component.literal("[O]").withStyle(ChatFormatting.GREEN)
+                : Component.literal("[*]").withStyle(ChatFormatting.RED);
     }
 }

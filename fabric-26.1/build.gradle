@@ -1,12 +1,10 @@
 plugins {
-    id "fabric-loom" version "1.15.1"
+    id "net.fabricmc.fabric-loom" version "1.15.1"
     id "java"
 }
 
-// Covers Minecraft 26.1 and future 26.x hotfixes
 version = "${rootProject.mod_version}+mc26.1"
 
-// Java 25 is required by Minecraft 26.1+
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(25)
@@ -23,17 +21,15 @@ sourceSets.main {
     java.srcDirs += [rootProject.file("common/src/main/java")]
     resources.srcDirs += [rootProject.file("common/src/main/resources")]
     java.srcDirs += [rootProject.file("versions/26.1/src/main/java")]
+    // Include the 26.1-specific mixins.json (overrides the one from common/)
+    resources.srcDirs += [rootProject.file("versions/26.1")]
 }
 
 dependencies {
     minecraft "com.mojang:minecraft:${rootProject.mc_26_1}"
-
-    // 26.1 is unobfuscated — official Mojang names are the only supported
-    // mapping set.  Yarn and Intermediary are no longer available.
-    mappings loom.officialMojangMappings()
-
-    modImplementation "net.fabricmc:fabric-loader:${rootProject.fabric_loader_version}"
-    modImplementation "net.fabricmc.fabric-api:fabric-api:${rootProject.fabric_api_26_1}"
+    // No mappings line — 26.1 is unobfuscated
+    implementation "net.fabricmc:fabric-loader:${rootProject.fabric_loader_version}"
+    implementation "net.fabricmc.fabric-api:fabric-api:${rootProject.fabric_api_26_1}"
 }
 
 processResources {

@@ -8,21 +8,21 @@ pluginManagement {
 }
 
 include(
-    // ── Legacy (1.21.1–1.21.3) ─────────────────────────
-    "fabric-1.21.1",
-    "neoforge-1.21.1",
+        // ── Legacy (1.21.1–1.21.3) ─────────────────────────
+        "fabric-1.21.1",
+        "neoforge-1.21.1",
 
-    // ── 1.21.4 ──────────────────────────────────────────
-    "fabric-1.21.4",
-    "neoforge-1.21.4",
+        // ── 1.21.4 ──────────────────────────────────────────
+        "fabric-1.21.4",
+        "neoforge-1.21.4",
 
-    // ── 1.21.5–1.21.11  (single JAR each loader) ────────
-    "fabric-1.21.5",
-    "neoforge-1.21.5",
+        // ── 1.21.5–1.21.11  (single JAR each loader) ────────
+        "fabric-1.21.5",
+        "neoforge-1.21.5",
 
-    // ── 26.1+  (Java 25, new toolchain, single JAR each) ─
-    "fabric-26.1",
-    "neoforge-26.1"
+        // ── 26.1+  (Java 25 required) ────────────────────────
+        "fabric-26.1",
+        "neoforge-26.1"
 )
 
 rootProject.name = "hide-your-server-ip"
