@@ -16,16 +16,14 @@ authors = "exnfachjan"
 [[dependencies.hysi]]
 modId = "neoforge"
 type = "required"
-# NeoForge 26.1.x.y — covers all 26.1 hotfixes
-versionRange = "[26.1,26.2)"
+versionRange = "[26.1.0,26.1.1)"
 ordering = "NONE"
 side = "CLIENT"
 
 [[dependencies.hysi]]
 modId = "minecraft"
 type = "required"
-# Minecraft 26.1 and all hotfixes (26.1.1, 26.1.2, …)
-versionRange = "[26.1,26.2)"
+versionRange = "[26.1.0,26.1.1)"
 ordering = "NONE"
 side = "CLIENT"
 

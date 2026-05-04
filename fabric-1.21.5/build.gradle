@@ -1,14 +1,12 @@
 plugins {
-    id "fabric-loom" version "1.16.1"
+    id "fabric-loom" version "1.9.2"
     id "java"
 }
 
-// Covers Minecraft 1.21.5 through 1.21.11 (same toolchain, Java 21)
-version = "${rootProject.mod_version}+mc1.21.5-1.21.11"
+version = "${rootProject.mod_version}+mc1.21.5"
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_21
-    targetCompatibility = JavaVersion.VERSION_21
+    toolchain { languageVersion = JavaLanguageVersion.of(21) }
     withSourcesJar()
 }
 
@@ -17,16 +15,20 @@ tasks.withType(JavaCompile).configureEach {
     options.release = 21
 }
 
+tasks.withType(AbstractCopyTask).configureEach {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
 sourceSets.main {
-    java.srcDirs += [rootProject.file("common/src/main/java")]
+    java.srcDirs  += [rootProject.file("common/src/main/java")]
+    java.srcDirs  += [rootProject.file("versions/1.21.5/src/main/java")]
+    resources.srcDirs += [rootProject.file("versions/1.21.5/resources")]
     resources.srcDirs += [rootProject.file("common/src/main/resources")]
-    java.srcDirs += [rootProject.file("versions/1.21.5/src/main/java")]
 }
 
 dependencies {
-    minecraft "com.mojang:minecraft:${rootProject.mc_1_21_5}"
+    minecraft "com.mojang:minecraft:1.21.5"
     mappings loom.officialMojangMappings()
-
     modImplementation "net.fabricmc:fabric-loader:${rootProject.fabric_loader_version}"
     modImplementation "net.fabricmc.fabric-api:fabric-api:${rootProject.fabric_api_1_21_5}"
 }
@@ -34,12 +36,9 @@ dependencies {
 processResources {
     inputs.property "version", project.version
     filteringCharset "UTF-8"
-
-    filesMatching("fabric.mod.json") {
-        expand "version": project.version
-    }
+    filesMatching("fabric.mod.json") { expand "version": project.version }
 }
 
 base {
-    archivesName = "${rootProject.archives_base_name}-fabric-mc1.21.5-1.21.11"
+    archivesName = "hysi-mc1.21.5"
 }

@@ -6,9 +6,7 @@ plugins {
 version = "${rootProject.mod_version}+mc26.1"
 
 java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(25)
-    }
+    toolchain { languageVersion = JavaLanguageVersion.of(25) }
     withSourcesJar()
 }
 
@@ -17,23 +15,20 @@ tasks.withType(JavaCompile).configureEach {
     options.release = 25
 }
 
-// versions/26.1 resources are listed FIRST so they take priority over common/
-// when duplicates arise (e.g. hysi.mixins.json).
-sourceSets.main {
-    java.srcDirs += [rootProject.file("common/src/main/java")]
-    java.srcDirs += [rootProject.file("versions/26.1/src/main/java")]
-    resources.srcDirs += [rootProject.file("versions/26.1")]
-    resources.srcDirs += [rootProject.file("common/src/main/resources")]
-}
-
-// Keep the first occurrence (versions/26.1/hysi.mixins.json wins over common/)
 tasks.withType(AbstractCopyTask).configureEach {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
+sourceSets.main {
+    java.srcDirs  += [rootProject.file("common/src/main/java")]
+    java.srcDirs  += [rootProject.file("versions/26.1/src/main/java")]
+    resources.srcDirs += [rootProject.file("versions/26.1/resources")]
+    resources.srcDirs += [rootProject.file("common/src/main/resources")]
+}
+
 dependencies {
-    minecraft "com.mojang:minecraft:${rootProject.mc_26_1}"
-    // No mappings line — 26.1 is unobfuscated
+    minecraft "com.mojang:minecraft:26.1"
+    // No mappings line — 26.x is unobfuscated
     implementation "net.fabricmc:fabric-loader:${rootProject.fabric_loader_version}"
     implementation "net.fabricmc.fabric-api:fabric-api:${rootProject.fabric_api_26_1}"
 }
@@ -41,12 +36,9 @@ dependencies {
 processResources {
     inputs.property "version", project.version
     filteringCharset "UTF-8"
-
-    filesMatching("fabric.mod.json") {
-        expand "version": project.version
-    }
+    filesMatching("fabric.mod.json") { expand "version": project.version }
 }
 
 base {
-    archivesName = "${rootProject.archives_base_name}-fabric-mc26.1"
+    archivesName = "hysi-mc26.1"
 }

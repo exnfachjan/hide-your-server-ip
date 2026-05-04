@@ -6,8 +6,7 @@ plugins {
 version = "${rootProject.mod_version}+mc1.21.4"
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_21
-    targetCompatibility = JavaVersion.VERSION_21
+    toolchain { languageVersion = JavaLanguageVersion.of(21) }
     withSourcesJar()
 }
 
@@ -16,19 +15,19 @@ tasks.withType(JavaCompile).configureEach {
     options.release = 21
 }
 
-// Prevent duplicate file errors when common/ and neoforge/ resources overlap
 tasks.withType(AbstractCopyTask).configureEach {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
 sourceSets.main {
-    java.srcDirs += [rootProject.file("common/src/main/java")]
+    java.srcDirs  += [rootProject.file("common/src/main/java")]
+    java.srcDirs  += [rootProject.file("versions/1.21.4/src/main/java")]
+    resources.srcDirs += [rootProject.file("versions/1.21.4/resources")]
     resources.srcDirs += [rootProject.file("common/src/main/resources")]
-    java.srcDirs += [rootProject.file("versions/1.21.4/src/main/java")]
 }
 
 neoForge {
-    version = "21.4.157"
+    version = "${rootProject.neo_1_21_4}"
 
     runs {
         client {
@@ -47,15 +46,11 @@ neoForge {
 processResources {
     inputs.property "version", project.version
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-
     filesMatching("META-INF/neoforge.mods.toml") {
-        expand(
-            "version": project.version,
-            "file": ["jarVersion": project.version]
-        )
+        expand("version": project.version, "file": ["jarVersion": project.version])
     }
 }
 
 base {
-    archivesName = "${rootProject.archives_base_name}-neoforge-mc1.21.4"
+    archivesName = "hysi-mc1.21.4-neoforge"
 }

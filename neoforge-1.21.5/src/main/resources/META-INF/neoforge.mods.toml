@@ -16,15 +16,14 @@ authors = "exnfachjan"
 [[dependencies.hysi]]
 modId = "neoforge"
 type = "required"
-# Covers NeoForge 21.5.x through 21.11.x (all 1.21.5–1.21.11 builds)
-versionRange = "[21.5,21.12)"
+versionRange = "[21.5,21.6)"
 ordering = "NONE"
 side = "CLIENT"
 
 [[dependencies.hysi]]
 modId = "minecraft"
 type = "required"
-versionRange = "[1.21.5,1.21.12)"
+versionRange = "[1.21.5,1.21.6)"
 ordering = "NONE"
 side = "CLIENT"
 

@@ -2,6 +2,7 @@ package dev.exnfachjan.hysi.mixin;
 
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.screens.EditServerScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
@@ -16,8 +17,7 @@ import net.minecraft.client.gui.components.events.GuiEventListener;
 import java.util.ArrayList;
 import java.util.List;
 
-// String-based target avoids compile-time import issues across MC versions
-@Mixin(targets = "net.minecraft.client.gui.screens.EditServerScreen")
+@Mixin(EditServerScreen.class)
 public abstract class EditServerScreenMixin extends Screen {
 
     @Unique private EditBox hysi$ipBox;
@@ -49,8 +49,7 @@ public abstract class EditServerScreenMixin extends Screen {
     @Unique private void hysi$toggleVisibility() {
         hysi$ipVisible = !hysi$ipVisible;
         hysi$applyFormatter();
-        if (hysi$toggleButton != null)
-            hysi$toggleButton.setMessage(hysi$buttonLabel());
+        if (hysi$toggleButton != null) hysi$toggleButton.setMessage(hysi$buttonLabel());
     }
 
     @Unique private void hysi$applyFormatter() {

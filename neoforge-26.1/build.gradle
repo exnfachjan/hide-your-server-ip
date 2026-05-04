@@ -3,14 +3,10 @@ plugins {
     id "java"
 }
 
-// Covers Minecraft 26.1 and future 26.1.x hotfixes
 version = "${rootProject.mod_version}+mc26.1"
 
-// Java 25 is required by Minecraft 26.1+
 java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(25)
-    }
+    toolchain { languageVersion = JavaLanguageVersion.of(25) }
     withSourcesJar()
 }
 
@@ -19,21 +15,18 @@ tasks.withType(JavaCompile).configureEach {
     options.release = 25
 }
 
-// Prevent duplicate file errors when common/ and neoforge/ resources overlap
 tasks.withType(AbstractCopyTask).configureEach {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
 sourceSets.main {
-    java.srcDirs += [rootProject.file("common/src/main/java")]
+    java.srcDirs  += [rootProject.file("common/src/main/java")]
+    java.srcDirs  += [rootProject.file("versions/26.1/src/main/java")]
+    resources.srcDirs += [rootProject.file("versions/26.1/resources")]
     resources.srcDirs += [rootProject.file("common/src/main/resources")]
-    java.srcDirs += [rootProject.file("versions/26.1/src/main/java")]
-    // Include the 26.1-specific hysi.mixins.json (overrides the one from common/)
-    resources.srcDirs += [rootProject.file("versions/26.1")]
 }
 
 neoForge {
-    // NeoForge 26.1 uses four-component versioning: <mc-major>.<mc-minor>.<mc-patch>.<nf-build>
     version = "${rootProject.neo_26_1}"
 
     runs {
@@ -53,15 +46,11 @@ neoForge {
 processResources {
     inputs.property "version", project.version
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-
     filesMatching("META-INF/neoforge.mods.toml") {
-        expand(
-                "version": project.version,
-                "file": ["jarVersion": project.version]
-        )
+        expand("version": project.version, "file": ["jarVersion": project.version])
     }
 }
 
 base {
-    archivesName = "${rootProject.archives_base_name}-neoforge-mc26.1"
+    archivesName = "hysi-mc26.1-neoforge"
 }

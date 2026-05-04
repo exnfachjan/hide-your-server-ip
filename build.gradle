@@ -1,4 +1,3 @@
 subprojects {
     group = rootProject.maven_group
-    // version is set per-subproject via mcVersion property
 }

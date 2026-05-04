@@ -49,8 +49,7 @@ public abstract class EditServerScreenMixin extends Screen {
     @Unique private void hysi$toggleVisibility() {
         hysi$ipVisible = !hysi$ipVisible;
         hysi$applyFormatter();
-        if (hysi$toggleButton != null)
-            hysi$toggleButton.setMessage(hysi$buttonLabel());
+        if (hysi$toggleButton != null) hysi$toggleButton.setMessage(hysi$buttonLabel());
     }
 
     @Unique private void hysi$applyFormatter() {
