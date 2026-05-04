@@ -29,7 +29,7 @@ sourceSets.main {
 }
 
 neoForge {
-    version = "${rootProject.neo_1.21.5}"
+    version = "${rootProject.neo_1_21_5}"
 
     runs {
         client {

@@ -32,7 +32,7 @@ sourceSets.main {
 
 neoForge {
     // NeoForge 26.1 uses four-component versioning: <mc-major>.<mc-minor>.<mc-patch>.<nf-build>
-    version = "${rootProject.neo_26.1}"
+    version = "${rootProject.neo_26_1}"
 
     runs {
         client {

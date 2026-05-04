@@ -26,14 +26,14 @@ sourceSets.main {
 }
 
 dependencies {
-    minecraft "com.mojang:minecraft:${rootProject.mc_26.1}"
+    minecraft "com.mojang:minecraft:${rootProject.mc_26_1}"
 
     // 26.1 is unobfuscated — official Mojang names are the only supported
     // mapping set.  Yarn and Intermediary are no longer available.
     mappings loom.officialMojangMappings()
 
     modImplementation "net.fabricmc:fabric-loader:${rootProject.fabric_loader_version}"
-    modImplementation "net.fabricmc.fabric-api:fabric-api:${rootProject.fabric_api_26.1}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${rootProject.fabric_api_26_1}"
 }
 
 processResources {
