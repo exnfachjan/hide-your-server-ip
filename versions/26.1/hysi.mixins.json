@@ -4,7 +4,6 @@
   "package": "dev.exnfachjan.hysi.mixin",
   "compatibilityLevel": "JAVA_25",
   "client": [
-    "EditBoxFormatterAccessor",
     "EditServerScreenMixin",
     "DirectJoinServerScreenMixin"
   ],

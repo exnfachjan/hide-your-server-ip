@@ -21,7 +21,6 @@ public abstract class DirectJoinServerScreenMixin extends Screen {
     @Unique private EditBox hysi$ipBox;
     @Unique private String  hysi$realValue = "";
     @Unique private boolean hysi$masked = true;
-    @Unique private boolean hysi$syncing = false;
     @Unique private Button  hysi$toggleButton;
 
     protected DirectJoinServerScreenMixin(Component title) { super(title); }
@@ -40,7 +39,6 @@ public abstract class DirectJoinServerScreenMixin extends Screen {
                 Button.builder(hysi$buttonLabel(), btn -> {
                             hysi$masked = !hysi$masked;
                             hysi$applyDisplay();
-                            if (!hysi$masked) hysi$ipBox.moveCursorToEnd(false);
                             hysi$toggleButton.setMessage(hysi$buttonLabel());
                         })
                         .bounds(hysi$ipBox.getX() + hysi$ipBox.getWidth() + 2,
@@ -50,7 +48,8 @@ public abstract class DirectJoinServerScreenMixin extends Screen {
     }
 
     @Inject(method = "charTyped", at = @At("HEAD"), cancellable = true)
-    private void hysi$charTyped(char codePoint, int modifiers, CallbackInfoReturnable<Boolean> cir) {
+    private void hysi$charTyped(char codePoint, int modifiers,
+                                CallbackInfoReturnable<Boolean> cir) {
         if (!hysi$masked || hysi$ipBox == null || !hysi$ipBox.isFocused()) return;
         hysi$realValue += codePoint;
         hysi$applyDisplay();
@@ -58,11 +57,14 @@ public abstract class DirectJoinServerScreenMixin extends Screen {
     }
 
     @Inject(method = "keyPressed", at = @At("HEAD"), cancellable = true)
-    private void hysi$keyPressed(int keyCode, int scanCode, int modifiers, CallbackInfoReturnable<Boolean> cir) {
+    private void hysi$keyPressed(int keyCode, int scanCode, int modifiers,
+                                 CallbackInfoReturnable<Boolean> cir) {
         if (!hysi$masked || hysi$ipBox == null || !hysi$ipBox.isFocused()) return;
-        if (keyCode == GLFW.GLFW_KEY_BACKSPACE && !hysi$realValue.isEmpty()) {
-            hysi$realValue = hysi$realValue.substring(0, hysi$realValue.length() - 1);
-            hysi$applyDisplay();
+        if (keyCode == GLFW.GLFW_KEY_BACKSPACE) {
+            if (!hysi$realValue.isEmpty()) {
+                hysi$realValue = hysi$realValue.substring(0, hysi$realValue.length() - 1);
+                hysi$applyDisplay();
+            }
             cir.setReturnValue(true);
         } else if (keyCode == GLFW.GLFW_KEY_DELETE) {
             hysi$realValue = "";
@@ -71,19 +73,17 @@ public abstract class DirectJoinServerScreenMixin extends Screen {
         }
     }
 
-    @Unique private void hysi$applyDisplay() {
+    @Inject(method = "removed", at = @At("HEAD"))
+    private void hysi$onRemoved(CallbackInfo ci) {
         if (hysi$ipBox == null) return;
-        hysi$syncing = true;
-        hysi$ipBox.setValue(hysi$masked ? "•".repeat(hysi$realValue.length()) : hysi$realValue);
-        hysi$syncing = false;
+        hysi$ipBox.setValue(hysi$realValue);
     }
 
-    @Inject(method = "onClose", at = @At("HEAD"))
-    private void hysi$restoreBeforeSave(CallbackInfo ci) {
+    @Unique private void hysi$applyDisplay() {
         if (hysi$ipBox == null) return;
-        hysi$syncing = true;
-        hysi$ipBox.setValue(hysi$realValue);
-        hysi$syncing = false;
+        hysi$ipBox.setValue(hysi$masked
+                ? "•".repeat(hysi$realValue.length())
+                : hysi$realValue);
     }
 
     @Unique private Component hysi$buttonLabel() {
