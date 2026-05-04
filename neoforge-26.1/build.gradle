@@ -1,5 +1,5 @@
 plugins {
-    id "net.neoforged.moddev" version "${rootProject.neoforge_moddev_26.1}"
+    id "net.neoforged.moddev" version "2.0.141"
     id "java"
 }
 
@@ -54,8 +54,8 @@ processResources {
 
     filesMatching("META-INF/neoforge.mods.toml") {
         expand(
-            "version": project.version,
-            "file": ["jarVersion": project.version]
+                "version": project.version,
+                "file": ["jarVersion": project.version]
         )
     }
 }

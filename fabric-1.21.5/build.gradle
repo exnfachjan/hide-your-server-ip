@@ -1,5 +1,5 @@
 plugins {
-    id "fabric-loom" version "${rootProject.fabric_loom_1.21.5}"
+    id "fabric-loom" version "1.16.1"
     id "java"
 }
 
