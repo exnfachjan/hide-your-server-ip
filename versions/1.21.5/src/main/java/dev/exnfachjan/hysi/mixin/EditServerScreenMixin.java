@@ -2,6 +2,7 @@ package dev.exnfachjan.hysi.mixin;
 
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.screens.DirectJoinServerScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
@@ -14,6 +15,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BiFunction;
@@ -65,29 +67,35 @@ public abstract class EditServerScreenMixin extends Screen {
                 return FormattedCharSequence.forward("•".repeat(text.length()), Style.EMPTY);
             };
         }
-        hysi$setFormatterViaReflection(hysi$ipBox, fmt);
+        hysi$setFormatter(hysi$ipBox, fmt);
     }
 
     /**
-     * Sets the formatter field on EditBox via reflection.
-     * This is version-agnostic: we search all declared fields for one
-     * whose type is BiFunction and set it directly, bypassing the
-     * removed setFormatter() method and avoiding @Accessor remapping issues.
+     * Version-agnostic formatter injection.
+     * 1. Try setFormatter() method (exists in 1.21.1–1.21.5).
+     * 2. Fall back to setting all BiFunction fields directly via reflection
+     *    (needed for 1.21.6–1.21.11 where setFormatter() was removed).
      */
     @Unique
-    private static void hysi$setFormatterViaReflection(
-            EditBox box, BiFunction<String, Integer, FormattedCharSequence> formatter) {
+    private static void hysi$setFormatter(
+            EditBox box, BiFunction<String, Integer, FormattedCharSequence> fmt) {
+        // Try public method first (1.21.5 and older)
+        try {
+            Method m = EditBox.class.getMethod("setFormatter", BiFunction.class);
+            m.invoke(box, fmt);
+            return;
+        } catch (NoSuchMethodException ignored) {
+            // method removed — fall through to field reflection
+        } catch (Exception e) {
+            return;
+        }
+        // Reflection fallback: set every BiFunction field in the hierarchy
         Class<?> clazz = box.getClass();
         while (clazz != null) {
-            for (Field field : clazz.getDeclaredFields()) {
-                if (field.getType() == BiFunction.class) {
-                    field.setAccessible(true);
-                    try {
-                        field.set(box, formatter);
-                        return;
-                    } catch (IllegalAccessException e) {
-                        // continue searching
-                    }
+            for (Field f : clazz.getDeclaredFields()) {
+                if (f.getType() == BiFunction.class) {
+                    f.setAccessible(true);
+                    try { f.set(box, fmt); } catch (IllegalAccessException ignored) {}
                 }
             }
             clazz = clazz.getSuperclass();
