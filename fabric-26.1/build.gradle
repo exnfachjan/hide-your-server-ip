@@ -17,12 +17,18 @@ tasks.withType(JavaCompile).configureEach {
     options.release = 25
 }
 
+// versions/26.1 resources are listed FIRST so they take priority over common/
+// when duplicates arise (e.g. hysi.mixins.json).
 sourceSets.main {
     java.srcDirs += [rootProject.file("common/src/main/java")]
-    resources.srcDirs += [rootProject.file("common/src/main/resources")]
     java.srcDirs += [rootProject.file("versions/26.1/src/main/java")]
-    // Include the 26.1-specific mixins.json (overrides the one from common/)
     resources.srcDirs += [rootProject.file("versions/26.1")]
+    resources.srcDirs += [rootProject.file("common/src/main/resources")]
+}
+
+// Keep the first occurrence (versions/26.1/hysi.mixins.json wins over common/)
+tasks.withType(AbstractCopyTask).configureEach {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
 dependencies {
