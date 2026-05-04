@@ -11,82 +11,73 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import net.minecraft.client.gui.components.events.GuiEventListener;
-import org.lwjgl.glfw.GLFW;
 
 @Mixin(DirectJoinServerScreen.class)
 public abstract class DirectJoinServerScreenMixin extends Screen {
 
-    @Unique private EditBox hysi$ipBox;
-    @Unique private String  hysi$realValue = "";
+    @Unique private EditBox hysi$box;
+    @Unique private String  hysi$real = "";
     @Unique private boolean hysi$masked = true;
-    @Unique private Button  hysi$toggleButton;
+    @Unique private boolean hysi$lock = false;
+    @Unique private Button  hysi$btn;
 
     protected DirectJoinServerScreenMixin(Component title) { super(title); }
 
     @Inject(method = "init", at = @At("TAIL"))
-    private void hysi$afterInit(CallbackInfo ci) {
-        hysi$ipBox = null;
-        for (GuiEventListener child : this.children()) {
-            if (child instanceof EditBox box) { hysi$ipBox = box; break; }
-        }
-        if (hysi$ipBox == null) return;
-        hysi$realValue = hysi$ipBox.getValue();
-        hysi$ipBox.setWidth(hysi$ipBox.getWidth() - 26);
-        hysi$applyDisplay();
-        hysi$toggleButton = this.addRenderableWidget(
-                Button.builder(hysi$buttonLabel(), btn -> {
+    private void hysi$init(CallbackInfo ci) {
+        for (GuiEventListener c : this.children())
+            if (c instanceof EditBox b) { hysi$box = b; break; }
+        if (hysi$box == null) return;
+        hysi$real = hysi$box.getValue();
+
+        hysi$box.setResponder(val -> {
+            if (hysi$lock) return;
+            if (!hysi$masked) {
+                hysi$real = val;
+                return;
+            }
+            int prevLen = hysi$real.length();
+            int newLen  = val.length();
+            if (newLen > prevLen) {
+                String added = val.substring(prevLen);
+                hysi$real = hysi$real + added;
+            } else if (newLen < prevLen) {
+                hysi$real = hysi$real.substring(0, newLen);
+            }
+            hysi$lock = true;
+            hysi$box.setValue("•".repeat(hysi$real.length()));
+            hysi$lock = false;
+        });
+
+        hysi$box.setWidth(hysi$box.getWidth() - 26);
+        hysi$lock = true;
+        hysi$box.setValue("•".repeat(hysi$real.length()));
+        hysi$lock = false;
+
+        hysi$btn = this.addRenderableWidget(
+                Button.builder(hysi$label(), b -> {
                             hysi$masked = !hysi$masked;
-                            hysi$applyDisplay();
-                            hysi$toggleButton.setMessage(hysi$buttonLabel());
+                            hysi$lock = true;
+                            hysi$box.setValue(hysi$masked ? "•".repeat(hysi$real.length()) : hysi$real);
+                            hysi$lock = false;
+                            hysi$btn.setMessage(hysi$label());
                         })
-                        .bounds(hysi$ipBox.getX() + hysi$ipBox.getWidth() + 2,
-                                hysi$ipBox.getY(), 24, 20)
+                        .bounds(hysi$box.getX() + hysi$box.getWidth() + 2,
+                                hysi$box.getY(), 24, 20)
                         .build()
         );
     }
 
-    @Inject(method = "charTyped", at = @At("HEAD"), cancellable = true)
-    private void hysi$charTyped(char codePoint, int modifiers,
-                                CallbackInfoReturnable<Boolean> cir) {
-        if (!hysi$masked || hysi$ipBox == null || !hysi$ipBox.isFocused()) return;
-        hysi$realValue += codePoint;
-        hysi$applyDisplay();
-        cir.setReturnValue(true);
-    }
-
-    @Inject(method = "keyPressed", at = @At("HEAD"), cancellable = true)
-    private void hysi$keyPressed(int keyCode, int scanCode, int modifiers,
-                                 CallbackInfoReturnable<Boolean> cir) {
-        if (!hysi$masked || hysi$ipBox == null || !hysi$ipBox.isFocused()) return;
-        if (keyCode == GLFW.GLFW_KEY_BACKSPACE) {
-            if (!hysi$realValue.isEmpty()) {
-                hysi$realValue = hysi$realValue.substring(0, hysi$realValue.length() - 1);
-                hysi$applyDisplay();
-            }
-            cir.setReturnValue(true);
-        } else if (keyCode == GLFW.GLFW_KEY_DELETE) {
-            hysi$realValue = "";
-            hysi$applyDisplay();
-            cir.setReturnValue(true);
-        }
-    }
-
     @Inject(method = "removed", at = @At("HEAD"))
-    private void hysi$onRemoved(CallbackInfo ci) {
-        if (hysi$ipBox == null) return;
-        hysi$ipBox.setValue(hysi$realValue);
+    private void hysi$removed(CallbackInfo ci) {
+        if (hysi$box == null) return;
+        hysi$lock = true;
+        hysi$box.setValue(hysi$real);
+        hysi$lock = false;
     }
 
-    @Unique private void hysi$applyDisplay() {
-        if (hysi$ipBox == null) return;
-        hysi$ipBox.setValue(hysi$masked
-                ? "•".repeat(hysi$realValue.length())
-                : hysi$realValue);
-    }
-
-    @Unique private Component hysi$buttonLabel() {
+    @Unique private Component hysi$label() {
         return hysi$masked
                 ? Component.literal("[*]").withStyle(ChatFormatting.RED)
                 : Component.literal("[O]").withStyle(ChatFormatting.GREEN);

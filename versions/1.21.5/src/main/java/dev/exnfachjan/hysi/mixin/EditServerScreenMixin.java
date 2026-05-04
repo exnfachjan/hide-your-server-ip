@@ -10,113 +10,95 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import net.minecraft.client.gui.components.events.GuiEventListener;
-import org.lwjgl.glfw.GLFW;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Masks the server IP in EditServerScreen.
+ *
+ * DESIGN — only "init" and "removed" are injected.  Both are declared on
+ * Screen (the superclass) and are therefore always found in the RefMap even
+ * when targeting an obfuscated subclass via targets="...".
+ *
+ * Input handling while masked works via setResponder:
+ *   - lock=true  →  we set the value ourselves, ignore responder
+ *   - lock=false →  user changed the value; sync hysi$real from the delta
+ */
 @Mixin(targets = "net.minecraft.client.gui.screens.EditServerScreen")
 public abstract class EditServerScreenMixin extends Screen {
 
-    @Unique private EditBox hysi$ipBox;
-    @Unique private String  hysi$realValue = "";
+    @Unique private EditBox hysi$box;
+    @Unique private String  hysi$real = "";
     @Unique private boolean hysi$masked = true;
-    @Unique private Button  hysi$toggleButton;
+    @Unique private boolean hysi$lock = false;
+    @Unique private Button  hysi$btn;
 
     protected EditServerScreenMixin(Component title) { super(title); }
 
     @Inject(method = "init", at = @At("TAIL"))
-    private void hysi$afterInit(CallbackInfo ci) {
-        hysi$ipBox = null;
+    private void hysi$init(CallbackInfo ci) {
         List<EditBox> boxes = new ArrayList<>();
-        for (GuiEventListener child : this.children()) {
-            if (child instanceof EditBox box) boxes.add(box);
-        }
+        for (GuiEventListener c : this.children())
+            if (c instanceof EditBox b) boxes.add(b);
         if (boxes.isEmpty()) return;
         boxes.sort((a, b) -> Integer.compare(b.getY(), a.getY()));
-        hysi$ipBox = boxes.get(0);
+        hysi$box  = boxes.get(0);
+        hysi$real = hysi$box.getValue();
 
-        // Capture initial value (existing server IP when editing)
-        hysi$realValue = hysi$ipBox.getValue();
+        hysi$box.setResponder(val -> {
+            if (hysi$lock) return;          // our own setValue — ignore
+            if (!hysi$masked) {
+                hysi$real = val;            // unmasked: take value as-is
+                return;
+            }
+            // Masked: user typed or deleted.
+            // val contains whatever EditBox now holds (mix of bullets + new chars).
+            // We compute the change relative to our known bullet string.
+            int prevLen = hysi$real.length();
+            int newLen  = val.length();
+            if (newLen > prevLen) {
+                // Characters were added.  We can read the newly added chars from
+                // the end of val because EditBox stores them before our override.
+                String added = val.substring(prevLen);
+                hysi$real = hysi$real + added;
+            } else if (newLen < prevLen) {
+                hysi$real = hysi$real.substring(0, newLen);
+            }
+            // Re-apply bullets
+            hysi$lock = true;
+            hysi$box.setValue("•".repeat(hysi$real.length()));
+            hysi$lock = false;
+        });
 
-        hysi$ipBox.setWidth(hysi$ipBox.getWidth() - 26);
-        hysi$applyDisplay();
+        hysi$box.setWidth(hysi$box.getWidth() - 26);
+        hysi$lock = true;
+        hysi$box.setValue("•".repeat(hysi$real.length()));
+        hysi$lock = false;
 
-        hysi$toggleButton = this.addRenderableWidget(
-                Button.builder(hysi$buttonLabel(), btn -> {
+        hysi$btn = this.addRenderableWidget(
+                Button.builder(hysi$label(), b -> {
                             hysi$masked = !hysi$masked;
-                            hysi$applyDisplay();
-                            hysi$toggleButton.setMessage(hysi$buttonLabel());
+                            hysi$lock = true;
+                            hysi$box.setValue(hysi$masked ? "•".repeat(hysi$real.length()) : hysi$real);
+                            hysi$lock = false;
+                            hysi$btn.setMessage(hysi$label());
                         })
-                        .bounds(hysi$ipBox.getX() + hysi$ipBox.getWidth() + 2,
-                                hysi$ipBox.getY(), 24, 20)
+                        .bounds(hysi$box.getX() + hysi$box.getWidth() + 2,
+                                hysi$box.getY(), 24, 20)
                         .build()
         );
     }
 
-    /**
-     * Intercept character input when masked.
-     * We consume the event and manually append to hysi$realValue,
-     * then show the correct number of bullets.
-     */
-    @Inject(method = "charTyped", at = @At("HEAD"), cancellable = true)
-    private void hysi$charTyped(char codePoint, int modifiers,
-                                CallbackInfoReturnable<Boolean> cir) {
-        if (!hysi$masked || hysi$ipBox == null || !hysi$ipBox.isFocused()) return;
-        hysi$realValue += codePoint;
-        hysi$applyDisplay();
-        cir.setReturnValue(true);
-    }
-
-    /**
-     * Intercept backspace/delete when masked.
-     * All other keys (Enter, Tab, arrows…) are NOT cancelled so screen
-     * navigation and saving still work normally.
-     */
-    @Inject(method = "keyPressed", at = @At("HEAD"), cancellable = true)
-    private void hysi$keyPressed(int keyCode, int scanCode, int modifiers,
-                                 CallbackInfoReturnable<Boolean> cir) {
-        if (!hysi$masked || hysi$ipBox == null || !hysi$ipBox.isFocused()) return;
-        if (keyCode == GLFW.GLFW_KEY_BACKSPACE) {
-            if (!hysi$realValue.isEmpty()) {
-                hysi$realValue = hysi$realValue.substring(0, hysi$realValue.length() - 1);
-                hysi$applyDisplay();
-            }
-            cir.setReturnValue(true); // consume only backspace
-        } else if (keyCode == GLFW.GLFW_KEY_DELETE) {
-            hysi$realValue = "";
-            hysi$applyDisplay();
-            cir.setReturnValue(true); // consume only delete
-        }
-        // Everything else (Enter, Tab, Escape, Ctrl+A etc.) passes through
-    }
-
-    /**
-     * Before the screen saves, restore the real value so Minecraft
-     * writes the actual IP — not the bullet placeholder.
-     * We hook "addButton" which is called right before the save action
-     * in vanilla's addServer / editServer logic, but the safest hook is
-     * the save button's press which calls the parent onClose flow.
-     * Instead we inject at the top of every render tick: if the box
-     * no longer has our bullets (e.g. Minecraft read getValue() for
-     * saving) we don't need to do anything — so we just restore once
-     * right before the screen closes via removed().
-     */
     @Inject(method = "removed", at = @At("HEAD"))
-    private void hysi$onRemoved(CallbackInfo ci) {
-        if (hysi$ipBox == null) return;
-        hysi$ipBox.setValue(hysi$realValue);
+    private void hysi$removed(CallbackInfo ci) {
+        if (hysi$box == null) return;
+        hysi$lock = true;
+        hysi$box.setValue(hysi$real);
+        hysi$lock = false;
     }
 
-    @Unique private void hysi$applyDisplay() {
-        if (hysi$ipBox == null) return;
-        hysi$ipBox.setValue(hysi$masked
-                ? "•".repeat(hysi$realValue.length())
-                : hysi$realValue);
-    }
-
-    @Unique private Component hysi$buttonLabel() {
+    @Unique private Component hysi$label() {
         return hysi$masked
                 ? Component.literal("[*]").withStyle(ChatFormatting.RED)
                 : Component.literal("[O]").withStyle(ChatFormatting.GREEN);
