@@ -34,10 +34,10 @@ public abstract class DirectJoinServerScreenMixin extends Screen {
         hysi$ipBox.setWidth(hysi$ipBox.getWidth() - 26);
         hysi$applyFormatter();
         hysi$toggleButton = this.addRenderableWidget(
-            Button.builder(hysi$buttonLabel(), btn -> hysi$toggleVisibility())
-                  .bounds(hysi$ipBox.getX() + hysi$ipBox.getWidth() + 2,
-                          hysi$ipBox.getY(), 24, 20)
-                  .build()
+                Button.builder(hysi$buttonLabel(), btn -> hysi$toggleVisibility())
+                        .bounds(hysi$ipBox.getX() + hysi$ipBox.getWidth() + 2,
+                                hysi$ipBox.getY(), 24, 20)
+                        .build()
         );
     }
 
@@ -50,10 +50,11 @@ public abstract class DirectJoinServerScreenMixin extends Screen {
 
     @Unique private void hysi$applyFormatter() {
         if (hysi$ipBox == null) return;
+        EditBoxFormatterAccessor accessor = (EditBoxFormatterAccessor) hysi$ipBox;
         if (hysi$ipVisible) {
-            hysi$ipBox.setFormatter((text, pos) -> FormattedCharSequence.forward(text, Style.EMPTY));
+            accessor.hysi$setFormatter((text, pos) -> FormattedCharSequence.forward(text, Style.EMPTY));
         } else {
-            hysi$ipBox.setFormatter((text, pos) -> {
+            accessor.hysi$setFormatter((text, pos) -> {
                 if (text.isEmpty()) return FormattedCharSequence.EMPTY;
                 return FormattedCharSequence.forward("•".repeat(text.length()), Style.EMPTY);
             });
@@ -62,7 +63,7 @@ public abstract class DirectJoinServerScreenMixin extends Screen {
 
     @Unique private Component hysi$buttonLabel() {
         return hysi$ipVisible
-            ? Component.literal("[O]").withStyle(ChatFormatting.GREEN)
-            : Component.literal("[*]").withStyle(ChatFormatting.RED);
+                ? Component.literal("[O]").withStyle(ChatFormatting.GREEN)
+                : Component.literal("[*]").withStyle(ChatFormatting.RED);
     }
 }

@@ -3,13 +3,12 @@ package dev.exnfachjan.hysi.neoforge;
 import dev.exnfachjan.hysi.HYSIMod;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.fml.common.Mod;
-import net.neoforged.fml.loading.FMLEnvironment;
 
+// dist = Dist.CLIENT ensures this only runs on the client.
+// No runtime check needed — NeoForge 26.1 removed FMLEnvironment.dist.
 @Mod(value = HYSIMod.MOD_ID, dist = Dist.CLIENT)
 public class HYSINeoForgeMod {
     public HYSINeoForgeMod() {
-        if (FMLEnvironment.dist == Dist.CLIENT) {
-            HYSIMod.init();
-        }
+        HYSIMod.init();
     }
 }
