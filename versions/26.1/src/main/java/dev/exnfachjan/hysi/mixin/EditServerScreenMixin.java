@@ -25,7 +25,7 @@ import java.util.List;
  *   - lock=true  →  we set the value ourselves, ignore responder
  *   - lock=false →  user changed the value; sync hysi$real from the delta
  */
-@Mixin(targets = "net.minecraft.client.gui.screens.EditServerScreen")
+@Mixin(targets = "net.minecraft.client.gui.screens.multiplayer.EditServerScreen")
 public abstract class EditServerScreenMixin extends Screen {
 
     @Unique private EditBox hysi$box;
@@ -38,15 +38,27 @@ public abstract class EditServerScreenMixin extends Screen {
 
     @Inject(method = "init", at = @At("TAIL"))
     private void hysi$init(CallbackInfo ci) {
-        List<EditBox> boxes = new ArrayList<>();
-        for (GuiEventListener c : this.children())
-            if (c instanceof EditBox b) boxes.add(b);
-        if (boxes.isEmpty()) return;
-        boxes.sort((a, b) -> Integer.compare(b.getY(), a.getY()));
-        hysi$box  = boxes.get(0);
-        hysi$real = hysi$box.getValue();
+        hysi$setupIfNeeded();
+    }
 
-        hysi$box.setResponder(val -> {
+    @Inject(method = "tick", at = @At("TAIL"))
+    private void hysi$tick(CallbackInfo ci) {
+        hysi$setupIfNeeded();
+    }
+
+    @Unique
+    private void hysi$setupIfNeeded() {
+        if (hysi$btn != null) return;
+        if (hysi$box == null) {
+            List<EditBox> boxes = new ArrayList<>();
+            for (GuiEventListener c : this.children())
+                if (c instanceof EditBox b) boxes.add(b);
+            if (boxes.isEmpty()) return;
+            boxes.sort((a, b) -> Integer.compare(b.getY(), a.getY()));
+            hysi$box  = boxes.get(0);
+            hysi$real = hysi$box.getValue();
+
+            hysi$box.setResponder(val -> {
             if (hysi$lock) return;          // our own setValue — ignore
             if (!hysi$masked) {
                 hysi$real = val;            // unmasked: take value as-is
@@ -71,10 +83,11 @@ public abstract class EditServerScreenMixin extends Screen {
             hysi$lock = false;
         });
 
-        hysi$box.setWidth(hysi$box.getWidth() - 26);
-        hysi$lock = true;
-        hysi$box.setValue("•".repeat(hysi$real.length()));
-        hysi$lock = false;
+            hysi$box.setWidth(hysi$box.getWidth() - 26);
+            hysi$lock = true;
+            hysi$box.setValue("•".repeat(hysi$real.length()));
+            hysi$lock = false;
+        }
 
         hysi$btn = this.addRenderableWidget(
                 Button.builder(hysi$label(), b -> {
