@@ -1,5 +1,5 @@
 plugins {
-    id "fabric-loom" version "1.15.2"
+    id "net.fabricmc.fabric-loom" version "1.15.2"
     id "java"
 }
 
@@ -28,7 +28,7 @@ sourceSets.main {
 
 dependencies {
     minecraft "com.mojang:minecraft:26.1"
-    // No mappings line — 26.x is unobfuscated
+    // No mappings — 26.x is unobfuscated; use net.fabricmc.fabric-loom (no-remap variant)
     implementation "net.fabricmc:fabric-loader:${rootProject.fabric_loader_version}"
     implementation "net.fabricmc.fabric-api:fabric-api:${rootProject.fabric_api_26_1}"
 }

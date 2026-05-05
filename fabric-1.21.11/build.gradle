@@ -3,7 +3,7 @@ plugins {
     id "java"
 }
 
-version = "${rootProject.mod_version}+mc1.21.9"
+version = "${rootProject.mod_version}+mc1.21.11"
 
 java {
     toolchain { languageVersion = JavaLanguageVersion.of(21) }
@@ -21,16 +21,16 @@ tasks.withType(AbstractCopyTask).configureEach {
 
 sourceSets.main {
     java.srcDirs  += [rootProject.file("common/src/main/java")]
-    java.srcDirs  += [rootProject.file("versions/1.21.9/src/main/java")]
-    resources.srcDirs += [rootProject.file("versions/1.21.9/resources")]
+    java.srcDirs  += [rootProject.file("versions/1.21.11/src/main/java")]
+    resources.srcDirs += [rootProject.file("versions/1.21.11/resources")]
     resources.srcDirs += [rootProject.file("common/src/main/resources")]
 }
 
 dependencies {
-    minecraft "com.mojang:minecraft:1.21.9"
+    minecraft "com.mojang:minecraft:1.21.11"
     mappings loom.officialMojangMappings()
     modImplementation "net.fabricmc:fabric-loader:${rootProject.fabric_loader_version}"
-    modImplementation "net.fabricmc.fabric-api:fabric-api:${rootProject.fabric_api_1_21_9}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${rootProject.fabric_api_1_21_11}"
 }
 
 processResources {
@@ -40,5 +40,5 @@ processResources {
 }
 
 base {
-    archivesName = "hysi-mc1.21.9"
+    archivesName = "hysi-mc1.21.11"
 }
