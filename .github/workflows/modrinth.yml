@@ -1,8 +1,6 @@
 name: Build & Publish
 
 # ── Trigger ──────────────────────────────────────────────────────────────────
-# Push a tag like "v1.0.1" to start the pipeline automatically.
-# Use "Run workflow" in the Actions tab to publish manually.
 on:
   push:
     tags:
@@ -10,27 +8,28 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version without v-prefix (e.g. 1.0.1)'
+        description: 'Version ohne v-Prefix (z.B. 1.0.1)'
         required: true
         default: '1.0.0'
 
 # ── Secrets needed ───────────────────────────────────────────────────────────
-# MODRINTH_ID    — your Modrinth project ID or slug (e.g. "hide-your-server-ip")
-# MODRINTH_TOKEN — your Modrinth personal access token (PAT)
+# MODRINTH_ID    — Modrinth Projekt-ID oder Slug
+# MODRINTH_TOKEN — Modrinth Personal Access Token
 
 jobs:
-  build-and-publish:
-    name: Build · GitHub Release · Modrinth
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # 1) BUILD — kompiliert alle JARs und stellt sie als Artifact bereit
+  # ══════════════════════════════════════════════════════════════════════════
+  build:
+    name: Build all JARs
     runs-on: ubuntu-latest
-    permissions:
-      contents: write   # required to create GitHub Releases
+    outputs:
+      version: ${{ steps.ver.outputs.v }}
 
     steps:
-      # ── 1. Source ───────────────────────────────────────────────────────
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      # ── 2. Java toolchains (21 for 1.21.x, 25 for 26.x) ────────────────
       - name: Set up JDK 21
         id: jdk21
         uses: actions/setup-java@v4
@@ -45,11 +44,8 @@ jobs:
           java-version: 25
           distribution: temurin
 
-      # ── 3. Gradle cache ─────────────────────────────────────────────────
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v4
 
-      # ── 4. Version ──────────────────────────────────────────────────────
       - name: Extract version
         id: ver
         run: |
@@ -59,245 +55,107 @@ jobs:
             echo "v=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
           fi
 
-      # ── 5. Build ────────────────────────────────────────────────────────
-      - name: Build all JARs
+      - name: Build
         run: |
           ./gradlew build -x test \
             -Pmod_version=${{ steps.ver.outputs.v }} \
             -Dorg.gradle.java.installations.paths="${{ steps.jdk21.outputs.path }},${{ steps.jdk25.outputs.path }}"
 
-      # ── 6. Collect distributable JARs ───────────────────────────────────
       - name: Collect JARs
         run: |
           mkdir release-jars
           find . -path "*/build/libs/*.jar" \
-               ! -name "*sources*" \
-               ! -name "*dev*" \
+               ! -name "*sources*" ! -name "*dev*" \
                -exec cp {} release-jars/ \;
-          echo "=== Release JARs ==="
+          echo "=== Collected JARs ==="
           ls -1 release-jars/
 
-      # ── 7. GitHub Release ───────────────────────────────────────────────
-      - name: Create GitHub Release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-jars
+          path: release-jars/
+          retention-days: 1
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # 2) GITHUB RELEASE — lädt alle JARs als Release-Assets hoch
+  # ══════════════════════════════════════════════════════════════════════════
+  github-release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-jars
+          path: release-jars/
+
+      - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          name: "v${{ steps.ver.outputs.v }}"
+          name: "v${{ needs.build.outputs.version }}"
           tag_name: ${{ github.ref_name }}
           files: release-jars/*
           generate_release_notes: true
           fail_on_unmatched_files: false
 
-      # ── 8. Modrinth — one version per MC release ─────────────────────────
-      # Each step uploads Fabric + NeoForge JAR together as a single
-      # Modrinth version.  continue-on-error keeps the pipeline alive when
-      # a specific game version is not yet listed on Modrinth.
+  # ══════════════════════════════════════════════════════════════════════════
+  # 3) MODRINTH — publiziert Fabric und NeoForge getrennt pro MC-Version
+  #    Jede Matrix-Kombination = eine eigenständige Modrinth-Version
+  # ══════════════════════════════════════════════════════════════════════════
+  modrinth:
+    name: "Modrinth › ${{ matrix.mc }} (${{ matrix.loader }})"
+    needs: build
+    runs-on: ubuntu-latest
+    continue-on-error: true   # Unbekannte MC-Versionen auf Modrinth sind OK
+    strategy:
+      fail-fast: false
+      matrix:
+        mc:
+          - "1.21.1"
+          - "1.21.2"
+          - "1.21.3"
+          - "1.21.4"
+          - "1.21.5"
+          - "1.21.6"
+          - "1.21.7"
+          - "1.21.8"
+          - "1.21.9"
+          - "1.21.10"
+          - "1.21.11"
+          - "26.1"
+          - "26.1.1"
+          - "26.1.2"
+        loader: [fabric, neoforge]
+        include:
+          # 26.x als beta markieren
+          - mc: "26.1"    version-type: beta
+          - mc: "26.1.1"  version-type: beta
+          - mc: "26.1.2"  version-type: beta
 
-      - name: "Modrinth › 1.21.1"
-        continue-on-error: true
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-jars
+          path: release-jars/
+
+      # Fabric-JAR:   hysi-mc{mc}-{ver}+mc{mc}.jar        (kein "neoforge" im Namen)
+      # NeoForge-JAR: hysi-mc{mc}-neoforge-{ver}+mc{mc}.jar
+      - name: Publish to Modrinth
         uses: Kir-Antipov/mc-publish@v3.3
         with:
           modrinth-id: ${{ secrets.MODRINTH_ID }}
           modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
-          name: "HYSI v${{ steps.ver.outputs.v }} for 1.21.1"
-          version: ${{ steps.ver.outputs.v }}+mc1.21.1
-          version-type: release
-          loaders: |
-            fabric
-            neoforge
-          game-versions: 1.21.1
-          files: release-jars/*+mc1.21.1.jar
-
-      - name: "Modrinth › 1.21.2"
-        continue-on-error: true
-        uses: Kir-Antipov/mc-publish@v3.3
-        with:
-          modrinth-id: ${{ secrets.MODRINTH_ID }}
-          modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
-          name: "HYSI v${{ steps.ver.outputs.v }} for 1.21.2"
-          version: ${{ steps.ver.outputs.v }}+mc1.21.2
-          version-type: release
-          loaders: |
-            fabric
-            neoforge
-          game-versions: 1.21.2
-          files: release-jars/*+mc1.21.2.jar
-
-      - name: "Modrinth › 1.21.3"
-        continue-on-error: true
-        uses: Kir-Antipov/mc-publish@v3.3
-        with:
-          modrinth-id: ${{ secrets.MODRINTH_ID }}
-          modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
-          name: "HYSI v${{ steps.ver.outputs.v }} for 1.21.3"
-          version: ${{ steps.ver.outputs.v }}+mc1.21.3
-          version-type: release
-          loaders: |
-            fabric
-            neoforge
-          game-versions: 1.21.3
-          files: release-jars/*+mc1.21.3.jar
-
-      - name: "Modrinth › 1.21.4"
-        continue-on-error: true
-        uses: Kir-Antipov/mc-publish@v3.3
-        with:
-          modrinth-id: ${{ secrets.MODRINTH_ID }}
-          modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
-          name: "HYSI v${{ steps.ver.outputs.v }} for 1.21.4"
-          version: ${{ steps.ver.outputs.v }}+mc1.21.4
-          version-type: release
-          loaders: |
-            fabric
-            neoforge
-          game-versions: 1.21.4
-          files: release-jars/*+mc1.21.4.jar
-
-      - name: "Modrinth › 1.21.5"
-        continue-on-error: true
-        uses: Kir-Antipov/mc-publish@v3.3
-        with:
-          modrinth-id: ${{ secrets.MODRINTH_ID }}
-          modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
-          name: "HYSI v${{ steps.ver.outputs.v }} for 1.21.5"
-          version: ${{ steps.ver.outputs.v }}+mc1.21.5
-          version-type: release
-          loaders: |
-            fabric
-            neoforge
-          game-versions: 1.21.5
-          files: release-jars/*+mc1.21.5.jar
-
-      - name: "Modrinth › 1.21.6"
-        continue-on-error: true
-        uses: Kir-Antipov/mc-publish@v3.3
-        with:
-          modrinth-id: ${{ secrets.MODRINTH_ID }}
-          modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
-          name: "HYSI v${{ steps.ver.outputs.v }} for 1.21.6"
-          version: ${{ steps.ver.outputs.v }}+mc1.21.6
-          version-type: release
-          loaders: |
-            fabric
-            neoforge
-          game-versions: 1.21.6
-          files: release-jars/*+mc1.21.6.jar
-
-      - name: "Modrinth › 1.21.7"
-        continue-on-error: true
-        uses: Kir-Antipov/mc-publish@v3.3
-        with:
-          modrinth-id: ${{ secrets.MODRINTH_ID }}
-          modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
-          name: "HYSI v${{ steps.ver.outputs.v }} for 1.21.7"
-          version: ${{ steps.ver.outputs.v }}+mc1.21.7
-          version-type: release
-          loaders: |
-            fabric
-            neoforge
-          game-versions: 1.21.7
-          files: release-jars/*+mc1.21.7.jar
-
-      - name: "Modrinth › 1.21.8"
-        continue-on-error: true
-        uses: Kir-Antipov/mc-publish@v3.3
-        with:
-          modrinth-id: ${{ secrets.MODRINTH_ID }}
-          modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
-          name: "HYSI v${{ steps.ver.outputs.v }} for 1.21.8"
-          version: ${{ steps.ver.outputs.v }}+mc1.21.8
-          version-type: release
-          loaders: |
-            fabric
-            neoforge
-          game-versions: 1.21.8
-          files: release-jars/*+mc1.21.8.jar
-
-      - name: "Modrinth › 1.21.9"
-        continue-on-error: true
-        uses: Kir-Antipov/mc-publish@v3.3
-        with:
-          modrinth-id: ${{ secrets.MODRINTH_ID }}
-          modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
-          name: "HYSI v${{ steps.ver.outputs.v }} for 1.21.9"
-          version: ${{ steps.ver.outputs.v }}+mc1.21.9
-          version-type: release
-          loaders: |
-            fabric
-            neoforge
-          game-versions: 1.21.9
-          files: release-jars/*+mc1.21.9.jar
-
-      - name: "Modrinth › 1.21.10"
-        continue-on-error: true
-        uses: Kir-Antipov/mc-publish@v3.3
-        with:
-          modrinth-id: ${{ secrets.MODRINTH_ID }}
-          modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
-          name: "HYSI v${{ steps.ver.outputs.v }} for 1.21.10"
-          version: ${{ steps.ver.outputs.v }}+mc1.21.10
-          version-type: release
-          loaders: |
-            fabric
-            neoforge
-          game-versions: 1.21.10
-          files: release-jars/*+mc1.21.10.jar
-
-      - name: "Modrinth › 1.21.11"
-        continue-on-error: true
-        uses: Kir-Antipov/mc-publish@v3.3
-        with:
-          modrinth-id: ${{ secrets.MODRINTH_ID }}
-          modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
-          name: "HYSI v${{ steps.ver.outputs.v }} for 1.21.11"
-          version: ${{ steps.ver.outputs.v }}+mc1.21.11
-          version-type: release
-          loaders: |
-            fabric
-            neoforge
-          game-versions: 1.21.11
-          files: release-jars/*+mc1.21.11.jar
-
-      - name: "Modrinth › 26.1"
-        continue-on-error: true
-        uses: Kir-Antipov/mc-publish@v3.3
-        with:
-          modrinth-id: ${{ secrets.MODRINTH_ID }}
-          modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
-          name: "HYSI v${{ steps.ver.outputs.v }} for 26.1"
-          version: ${{ steps.ver.outputs.v }}+mc26.1
-          version-type: beta
-          loaders: |
-            fabric
-            neoforge
-          game-versions: 26.1
-          files: release-jars/*+mc26.1.jar
-
-      - name: "Modrinth › 26.1.1"
-        continue-on-error: true
-        uses: Kir-Antipov/mc-publish@v3.3
-        with:
-          modrinth-id: ${{ secrets.MODRINTH_ID }}
-          modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
-          name: "HYSI v${{ steps.ver.outputs.v }} for 26.1.1"
-          version: ${{ steps.ver.outputs.v }}+mc26.1.1
-          version-type: beta
-          loaders: |
-            fabric
-            neoforge
-          game-versions: 26.1.1
-          files: release-jars/*+mc26.1.1.jar
-
-      - name: "Modrinth › 26.1.2"
-        continue-on-error: true
-        uses: Kir-Antipov/mc-publish@v3.3
-        with:
-          modrinth-id: ${{ secrets.MODRINTH_ID }}
-          modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
-          name: "HYSI v${{ steps.ver.outputs.v }} for 26.1.2"
-          version: ${{ steps.ver.outputs.v }}+mc26.1.2
-          version-type: beta
-          loaders: |
-            fabric
-            neoforge
-          game-versions: 26.1.2
-          files: release-jars/*+mc26.1.2.jar
+          name: >-
+            HYSI v${{ needs.build.outputs.version }}
+            for ${{ matrix.mc }} (${{ matrix.loader == 'fabric' && 'Fabric' || 'NeoForge' }})
+          version: ${{ needs.build.outputs.version }}+mc${{ matrix.mc }}-${{ matrix.loader }}
+          version-type: ${{ matrix.version-type || 'release' }}
+          loaders: ${{ matrix.loader }}
+          game-versions: ${{ matrix.mc }}
+          files: >-
+            release-jars/hysi-mc${{ matrix.mc }}-${{
+              matrix.loader == 'neoforge' && 'neoforge-' || ''
+            }}${{ needs.build.outputs.version }}+mc${{ matrix.mc }}.jar
