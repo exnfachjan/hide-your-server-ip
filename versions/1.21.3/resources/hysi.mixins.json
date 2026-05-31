@@ -1,0 +1,13 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "dev.exnfachjan.hysi.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "EditServerScreenMixin",
+    "DirectJoinServerScreenMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

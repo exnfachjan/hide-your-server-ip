@@ -16,14 +16,14 @@ authors = "exnfachjan"
 [[dependencies.hysi]]
 modId = "neoforge"
 type = "required"
-versionRange = "[21.1,21.2)"
+versionRange = "[21.3,21.4)"
 ordering = "NONE"
 side = "CLIENT"
 
 [[dependencies.hysi]]
 modId = "minecraft"
 type = "required"
-versionRange = "[1.21.1,1.21.2)"
+versionRange = "[1.21.3,1.21.4)"
 ordering = "NONE"
 side = "CLIENT"
 
