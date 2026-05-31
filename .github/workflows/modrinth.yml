@@ -131,9 +131,12 @@ jobs:
         loader: [fabric, neoforge]
         include:
           # 26.x als beta markieren
-          - mc: "26.1"    version-type: beta
-          - mc: "26.1.1"  version-type: beta
-          - mc: "26.1.2"  version-type: beta
+          - mc: "26.1"
+            version-type: beta
+          - mc: "26.1.1"
+            version-type: beta
+          - mc: "26.1.2"
+            version-type: beta
 
     steps:
       - uses: actions/download-artifact@v4
@@ -170,3 +173,4 @@ jobs:
           loaders: ${{ matrix.loader }}
           game-versions: ${{ matrix.mc }}
           files: ${{ steps.jar.outputs.file }}
+          additional-files: ""
