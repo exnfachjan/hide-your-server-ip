@@ -144,35 +144,31 @@ jobs:
           name: release-jars
           path: release-jars/
 
-      # Berechne den exakten Dateinamen im Shell-Step (vermeidet YAML-Faltungsprobleme)
-      # Fabric-JAR:   hysi-mc{mc}-{ver}+mc{mc}.jar
-      # NeoForge-JAR: hysi-mc{mc}-neoforge-{ver}+mc{mc}.jar
-      - name: Resolve JAR path
+      - name: Isolate JAR
         id: jar
         env:
           MC: ${{ matrix.mc }}
           LOADER: ${{ matrix.loader }}
           VER: ${{ needs.build.outputs.version }}
         run: |
+          mkdir single-jar
           if [ "$LOADER" = "neoforge" ]; then
-            echo "file=release-jars/hysi-mc${MC}-neoforge-${VER}+mc${MC}.jar" >> $GITHUB_OUTPUT
+            cp "release-jars/hysi-mc${MC}-neoforge-${VER}+mc${MC}.jar" single-jar/
             echo "label=NeoForge" >> $GITHUB_OUTPUT
           else
-            echo "file=release-jars/hysi-mc${MC}-${VER}+mc${MC}.jar" >> $GITHUB_OUTPUT
+            cp "release-jars/hysi-mc${MC}-${VER}+mc${MC}.jar" single-jar/
             echo "label=Fabric" >> $GITHUB_OUTPUT
           fi
+          echo "file=$(ls single-jar/*.jar)" >> $GITHUB_OUTPUT
 
       - name: Publish to Modrinth
         uses: Kir-Antipov/mc-publish@v3.3
         with:
           modrinth-id: ${{ secrets.MODRINTH_ID }}
           modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
-          name: "HYSI v${{ needs.build.outputs.version }} for ${{ matrix.mc }} (${{ steps.jar.outputs.label }})"
+          name: "HYSI v${{ needs.build.outputs.version }} for ${{ matrix.mc }} [${{ steps.jar.outputs.label }}]"
           version: ${{ needs.build.outputs.version }}+mc${{ matrix.mc }}-${{ matrix.loader }}
           version-type: ${{ matrix.version-type || 'release' }}
-          loaders: |
-            ${{ matrix.loader }}
-          game-versions: |
-            ${{ matrix.mc }}
+          loaders: ${{ matrix.loader }}
+          game-versions: ${{ matrix.mc }}
           files: ${{ steps.jar.outputs.file }}
-          additional-files: ""
