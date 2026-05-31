@@ -1,0 +1,23 @@
+# Shell scripts must have LF on all platforms so Linux can execute them
+gradlew          text eol=lf
+*.sh             text eol=lf
+
+# Windows batch files keep CRLF
+gradlew.bat      text eol=crlf
+*.bat            text eol=crlf
+*.cmd            text eol=crlf
+
+# Source & config files: let Git handle normalization
+*.java           text eol=lf
+*.gradle         text eol=lf
+*.properties     text eol=lf
+*.json           text eol=lf
+*.toml           text eol=lf
+*.yml            text eol=lf
+*.yaml           text eol=lf
+*.md             text eol=lf
+
+# Binaries
+*.jar            binary
+*.png            binary
+*.zip            binary
