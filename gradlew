@@ -7,7 +7,7 @@
 APP_BASE_NAME=${0##*/}
 APP_HOME=$( cd -P "${0%"${0##*/}"}" > /dev/null && printf '%s\n' "$PWD" ) || exit
 
-DEFAULT_JVM_OPTS='"-Xmx64m" "-Xms64m"'
+DEFAULT_JVM_OPTS='-Xmx64m -Xms64m'
 
 if [ -n "$JAVA_HOME" ] ; then
     JAVACMD=$JAVA_HOME/bin/java
