@@ -5,11 +5,7 @@ name: Publish to CurseForge
 on:
   release:
     types: [published]
-  workflow_dispatch:
-    inputs:
-      tag:
-        description: 'Release-Tag (z.B. v1.0.1)'
-        required: true
+  workflow_dispatch: {}
 
 # ── Secrets needed ───────────────────────────────────────────────────────────
 # CURSEFORGE_ID    — CurseForge Projekt-ID (numerisch)
@@ -33,21 +29,20 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           mkdir release-jars
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            gh release download "${{ inputs.tag }}" --repo "$REPO" --pattern "*.jar" --dir release-jars/
-          else
-            gh release download --repo "$REPO" --pattern "*.jar" --dir release-jars/
-          fi
+          gh release download --repo "$REPO" --pattern "*.jar" --dir release-jars/
           echo "=== Downloaded JARs ==="
           ls -1 release-jars/
 
       - name: Extract version
         id: ver
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            TAG="${{ inputs.tag }}"
-          else
+          if [ "${{ github.event_name }}" = "release" ]; then
             TAG="${{ github.event.release.tag_name }}"
+          else
+            TAG=$(gh release view --repo "$REPO" --json tagName --jq '.tagName')
           fi
           echo "v=${TAG#v}" >> $GITHUB_OUTPUT
 
