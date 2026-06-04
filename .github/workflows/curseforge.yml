@@ -1,0 +1,149 @@
+name: Build & Publish (CurseForge)
+
+# ── Trigger ──────────────────────────────────────────────────────────────────
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version ohne v-Prefix (z.B. 1.0.1)'
+        required: true
+        default: '1.0.0'
+
+# ── Secrets needed ───────────────────────────────────────────────────────────
+# CURSEFORGE_ID    — CurseForge Projekt-ID (numerisch)
+# CURSEFORGE_TOKEN — CurseForge API-Key
+
+jobs:
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # 1) BUILD — kompiliert alle JARs und stellt sie als Artifact bereit
+  # ══════════════════════════════════════════════════════════════════════════
+  build:
+    name: Build all JARs
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.ver.outputs.v }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        id: jdk21
+        uses: actions/setup-java@v4
+        with:
+          java-version: 21
+          distribution: temurin
+
+      - name: Set up JDK 25
+        id: jdk25
+        uses: actions/setup-java@v4
+        with:
+          java-version: 25
+          distribution: temurin
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Extract version
+        id: ver
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "v=${{ inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "v=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build
+        run: |
+          ./gradlew build -x test \
+            -Pmod_version=${{ steps.ver.outputs.v }} \
+            -Dorg.gradle.java.installations.paths="${{ steps.jdk21.outputs.path }},${{ steps.jdk25.outputs.path }}"
+
+      - name: Collect JARs
+        run: |
+          mkdir release-jars
+          find . -path "*/build/libs/*.jar" \
+               ! -name "*sources*" ! -name "*dev*" \
+               -exec cp {} release-jars/ \;
+          echo "=== Collected JARs ==="
+          ls -1 release-jars/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-jars
+          path: release-jars/
+          retention-days: 1
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # 2) CURSEFORGE — publiziert Fabric und NeoForge getrennt pro MC-Version
+  #    Jede Matrix-Kombination = eine eigenständige CurseForge-Version
+  # ══════════════════════════════════════════════════════════════════════════
+  curseforge:
+    name: "CurseForge › ${{ matrix.mc }} (${{ matrix.loader }})"
+    needs: build
+    runs-on: ubuntu-latest
+    continue-on-error: true   # Unbekannte MC-Versionen auf CurseForge sind OK
+    strategy:
+      fail-fast: false
+      matrix:
+        mc:
+          - "1.21.1"
+          - "1.21.2"
+          - "1.21.3"
+          - "1.21.4"
+          - "1.21.5"
+          - "1.21.6"
+          - "1.21.7"
+          - "1.21.8"
+          - "1.21.9"
+          - "1.21.10"
+          - "1.21.11"
+          - "26.1"
+          - "26.1.1"
+          - "26.1.2"
+        loader: [fabric, neoforge]
+        include:
+          # 26.x als beta markieren
+          - mc: "26.1"
+            version-type: beta
+          - mc: "26.1.1"
+            version-type: beta
+          - mc: "26.1.2"
+            version-type: beta
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-jars
+          path: release-jars/
+
+      - name: Isolate JAR
+        id: jar
+        env:
+          MC: ${{ matrix.mc }}
+          LOADER: ${{ matrix.loader }}
+          VER: ${{ needs.build.outputs.version }}
+        run: |
+          mkdir single-jar
+          if [ "$LOADER" = "neoforge" ]; then
+            cp "release-jars/hysi-mc${MC}-neoforge-${VER}+mc${MC}.jar" single-jar/
+            echo "label=NeoForge" >> $GITHUB_OUTPUT
+          else
+            cp "release-jars/hysi-mc${MC}-${VER}+mc${MC}.jar" single-jar/
+            echo "label=Fabric" >> $GITHUB_OUTPUT
+          fi
+          echo "file=$(ls single-jar/*.jar)" >> $GITHUB_OUTPUT
+
+      - name: Publish to CurseForge
+        uses: Kir-Antipov/mc-publish@v3.3
+        with:
+          curseforge-id: ${{ secrets.CURSEFORGE_ID }}
+          curseforge-token: ${{ secrets.CURSEFORGE_TOKEN }}
+          name: "HYSI v${{ needs.build.outputs.version }} for ${{ matrix.mc }} [${{ steps.jar.outputs.label }}]"
+          version: ${{ needs.build.outputs.version }}+mc${{ matrix.mc }}-${{ matrix.loader }}
+          version-type: ${{ matrix.version-type || 'release' }}
+          loaders: ${{ matrix.loader }}
+          game-versions: ${{ matrix.mc }}
+          files: ${{ steps.jar.outputs.file }}
