@@ -42,12 +42,11 @@ jobs:
       - name: Download Release Assets
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.ver.outputs.tag }}
+          REPO: ${{ github.repository }}
         run: |
           mkdir release-jars
-          gh release download ${{ steps.ver.outputs.tag }} \
-            --repo ${{ github.repository }} \
-            --pattern "*.jar" \
-            --dir release-jars/
+          gh release download "$RELEASE_TAG" --repo "$REPO" --pattern "*.jar" --dir release-jars/
           echo "=== Downloaded JARs ==="
           ls -1 release-jars/
 
