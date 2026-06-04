@@ -1,16 +1,15 @@
-name: Build & Publish (CurseForge)
+name: Publish to CurseForge
 
 # ── Trigger ──────────────────────────────────────────────────────────────────
+# Läuft nachdem der Modrinth-Workflow den GitHub Release erstellt hat.
 on:
-  push:
-    tags:
-      - 'v*'
+  release:
+    types: [published]
   workflow_dispatch:
     inputs:
-      version:
-        description: 'Version ohne v-Prefix (z.B. 1.0.1)'
+      tag:
+        description: 'Release-Tag (z.B. v1.0.1)'
         required: true
-        default: '1.0.0'
 
 # ── Secrets needed ───────────────────────────────────────────────────────────
 # CURSEFORGE_ID    — CurseForge Projekt-ID (numerisch)
@@ -19,55 +18,37 @@ on:
 jobs:
 
   # ══════════════════════════════════════════════════════════════════════════
-  # 1) BUILD — kompiliert alle JARs und stellt sie als Artifact bereit
+  # 1) DOWNLOAD — lädt JARs vom GitHub Release herunter
   # ══════════════════════════════════════════════════════════════════════════
-  build:
-    name: Build all JARs
+  download:
+    name: Download Release JARs
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.ver.outputs.v }}
+      tag: ${{ steps.ver.outputs.tag }}
 
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up JDK 21
-        id: jdk21
-        uses: actions/setup-java@v4
-        with:
-          java-version: 21
-          distribution: temurin
-
-      - name: Set up JDK 25
-        id: jdk25
-        uses: actions/setup-java@v4
-        with:
-          java-version: 25
-          distribution: temurin
-
-      - uses: gradle/actions/setup-gradle@v4
-
       - name: Extract version
         id: ver
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "v=${{ inputs.version }}" >> $GITHUB_OUTPUT
+            TAG="${{ inputs.tag }}"
           else
-            echo "v=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+            TAG="${{ github.event.release.tag_name }}"
           fi
+          echo "v=${TAG#v}" >> $GITHUB_OUTPUT
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
 
-      - name: Build
-        run: |
-          ./gradlew build -x test \
-            -Pmod_version=${{ steps.ver.outputs.v }} \
-            -Dorg.gradle.java.installations.paths="${{ steps.jdk21.outputs.path }},${{ steps.jdk25.outputs.path }}"
-
-      - name: Collect JARs
+      - name: Download Release Assets
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           mkdir release-jars
-          find . -path "*/build/libs/*.jar" \
-               ! -name "*sources*" ! -name "*dev*" \
-               -exec cp {} release-jars/ \;
-          echo "=== Collected JARs ==="
+          gh release download ${{ steps.ver.outputs.tag }} \
+            --repo ${{ github.repository }} \
+            --pattern "*.jar" \
+            --dir release-jars/
+          echo "=== Downloaded JARs ==="
           ls -1 release-jars/
 
       - uses: actions/upload-artifact@v4
@@ -78,11 +59,10 @@ jobs:
 
   # ══════════════════════════════════════════════════════════════════════════
   # 2) CURSEFORGE — publiziert Fabric und NeoForge getrennt pro MC-Version
-  #    Jede Matrix-Kombination = eine eigenständige CurseForge-Version
   # ══════════════════════════════════════════════════════════════════════════
   curseforge:
     name: "CurseForge › ${{ matrix.mc }} (${{ matrix.loader }})"
-    needs: build
+    needs: download
     runs-on: ubuntu-latest
     continue-on-error: true   # Unbekannte MC-Versionen auf CurseForge sind OK
     strategy:
@@ -105,7 +85,6 @@ jobs:
           - "26.1.2"
         loader: [fabric, neoforge]
         include:
-          # 26.x als beta markieren
           - mc: "26.1"
             version-type: beta
           - mc: "26.1.1"
@@ -124,7 +103,7 @@ jobs:
         env:
           MC: ${{ matrix.mc }}
           LOADER: ${{ matrix.loader }}
-          VER: ${{ needs.build.outputs.version }}
+          VER: ${{ needs.download.outputs.version }}
         run: |
           mkdir single-jar
           if [ "$LOADER" = "neoforge" ]; then
@@ -141,8 +120,8 @@ jobs:
         with:
           curseforge-id: ${{ secrets.CURSEFORGE_ID }}
           curseforge-token: ${{ secrets.CURSEFORGE_TOKEN }}
-          name: "HYSI v${{ needs.build.outputs.version }} for ${{ matrix.mc }} [${{ steps.jar.outputs.label }}]"
-          version: ${{ needs.build.outputs.version }}+mc${{ matrix.mc }}-${{ matrix.loader }}
+          name: "HYSI v${{ needs.download.outputs.version }} for ${{ matrix.mc }} [${{ steps.jar.outputs.label }}]"
+          version: ${{ needs.download.outputs.version }}+mc${{ matrix.mc }}-${{ matrix.loader }}
           version-type: ${{ matrix.version-type || 'release' }}
           loaders: ${{ matrix.loader }}
           game-versions: ${{ matrix.mc }}
