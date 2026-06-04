@@ -35,16 +35,10 @@ jobs:
 
       - name: Extract version
         id: ver
-        env:
-          GH_TOKEN: ${{ github.token }}
-          REPO: ${{ github.repository }}
         run: |
-          if [ "${{ github.event_name }}" = "release" ]; then
-            TAG="${{ github.event.release.tag_name }}"
-          else
-            TAG=$(gh release view --repo "$REPO" --json tagName --jq '.tagName')
-          fi
-          echo "v=${TAG#v}" >> $GITHUB_OUTPUT
+          SAMPLE=$(ls release-jars/ | grep -v neoforge | grep '\.jar$' | head -1)
+          VER=$(echo "$SAMPLE" | sed 's/hysi-mc[^-]*-\([^+]*\)+.*/\1/')
+          echo "v=$VER" >> $GITHUB_OUTPUT
 
       - uses: actions/upload-artifact@v4
         with:
