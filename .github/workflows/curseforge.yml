@@ -25,9 +25,22 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.ver.outputs.v }}
-      tag: ${{ steps.ver.outputs.tag }}
 
     steps:
+      - name: Download Release Assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          mkdir release-jars
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            gh release download "${{ inputs.tag }}" --repo "$REPO" --pattern "*.jar" --dir release-jars/
+          else
+            gh release download --repo "$REPO" --pattern "*.jar" --dir release-jars/
+          fi
+          echo "=== Downloaded JARs ==="
+          ls -1 release-jars/
+
       - name: Extract version
         id: ver
         run: |
@@ -37,18 +50,6 @@ jobs:
             TAG="${{ github.event.release.tag_name }}"
           fi
           echo "v=${TAG#v}" >> $GITHUB_OUTPUT
-          echo "tag=${TAG}" >> $GITHUB_OUTPUT
-
-      - name: Download Release Assets
-        env:
-          GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ steps.ver.outputs.tag }}
-          REPO: ${{ github.repository }}
-        run: |
-          mkdir release-jars
-          gh release download "$RELEASE_TAG" --repo "$REPO" --pattern "*.jar" --dir release-jars/
-          echo "=== Downloaded JARs ==="
-          ls -1 release-jars/
 
       - uses: actions/upload-artifact@v4
         with:
